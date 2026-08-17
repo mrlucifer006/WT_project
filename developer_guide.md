@@ -60,7 +60,9 @@ Billing/
 | `/api/whatsapp/status` | `GET` | Returns `{ "connected": bool, "qr_ready": bool }` |
 | `/api/whatsapp/qr` | `GET` | Returns `{ "qr_code": str }` for pairing |
 | `/api/whatsapp/qr_image` | `GET` | Direct PNG image stream of WhatsApp pairing QR |
-| `/api/whatsapp/logout` | `POST` | Disconnects and deletes session DB |
+| `/api/whatsapp/delete_session` | `POST` | Wipes `session.db` (`my_session.sqlite3`) and generates new QR |
+| `/api/auth/login` | `POST` | Authenticates with `ADMIN_ID` & `ADMIN_PASSWORD` |
+| `/api/auth/verify` | `POST` | Validates session token |
 | `/api/csv/download` | `GET` | Streams `transactions.csv` to admin |
 | `/api/csv/clear` | `POST` | Clears all records from CSV database, resets sessions, and wipes storage |
 | `/submit_entry` | `POST` | Generates QR pass, logs to CSV, and sends WhatsApp message |

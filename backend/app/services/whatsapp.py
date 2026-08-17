@@ -101,8 +101,8 @@ class WhatsAppService:
             logger.info("Inactive for > 2 days. Cleaning up session.")
             self.logout()
 
-    def logout(self):
-        """Explicitly disconnect and delete session DB."""
+    def delete_session(self) -> bool:
+        """Explicitly disconnect, delete session DB (session.db, my_session.sqlite3), and re-initialize."""
         try:
             if self.client:
                 self.client.disconnect()
@@ -110,17 +110,26 @@ class WhatsAppService:
             pass
         self.qr_code = None
         
-        # Remove sqlite db and WAL/SHM files
-        for ext in ["", "-wal", "-shm"]:
-            fpath = self.db_path + ext
-            if os.path.exists(fpath):
-                try:
-                    os.remove(fpath)
-                    logger.info(f"Deleted {fpath}")
-                except Exception as e:
-                    logger.error(f"Failed to delete {fpath}: {e}")
+        # Remove all potential sqlite session files
+        possible_names = [self.session_name, "my_session", "session", "session.db"]
+        for name in possible_names:
+            for ext in [".sqlite3", ".db", ".sqlite", ""]:
+                base = name + ext if (ext and not name.endswith(ext)) else name
+                for suffix in ["", "-wal", "-shm", "-journal"]:
+                    fpath = base + suffix
+                    if os.path.exists(fpath):
+                        try:
+                            os.remove(fpath)
+                            logger.info(f"Deleted session file: {fpath}")
+                        except Exception as e:
+                            logger.error(f"Failed to delete {fpath}: {e}")
         
         self._init_client()
+        return True
+
+    def logout(self):
+        """Force logout and delete session database."""
+        return self.delete_session()
 
     def start(self):
         """Starts the neonize connection loop in a single background thread."""

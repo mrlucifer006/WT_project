@@ -205,9 +205,10 @@ async def clear_database():
     return JSONResponse(status_code=500, content={"status": "error", "message": "Failed to clear database"})
 
 @app.post("/api/whatsapp/logout")
-async def wa_logout():
-    whatsapp_service.logout()
-    return {"status": "logged out"}
+@app.post("/api/whatsapp/delete_session")
+async def wa_delete_session():
+    whatsapp_service.delete_session()
+    return {"status": "success", "message": "WhatsApp session database deleted and reset"}
 
 @app.post("/api/auth/login")
 async def auth_login(request: Request):

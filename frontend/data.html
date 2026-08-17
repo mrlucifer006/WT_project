@@ -94,34 +94,49 @@
         </div>
 
         <!-- Action Cards Grid -->
-        <div class="grid grid-cols-1 sm:grid-cols-2 gap-6 mb-8">
+        <div class="grid grid-cols-1 sm:grid-cols-3 gap-6 mb-8">
             <!-- Export Card -->
             <div class="bg-white rounded-2xl p-6 shadow-sm border border-slate-200 flex flex-col justify-between">
                 <div>
                     <div class="w-10 h-10 bg-emerald-50 text-emerald-600 rounded-xl flex items-center justify-center mb-3">
                         <span class="material-icons">download</span>
                     </div>
-                    <h3 class="text-base font-bold text-slate-900">Export Entry Records</h3>
+                    <h3 class="text-base font-bold text-slate-900">Export Records</h3>
                     <p class="text-xs text-slate-500 mt-1">Download full attendance CSV containing timestamp, name, phone, and pass type.</p>
                 </div>
                 <button onclick="window.open(`${BACKEND_URL}/api/csv/download`, '_blank')"
-                    class="mt-6 w-full bg-emerald-600 hover:bg-emerald-700 active:bg-emerald-800 text-white font-semibold py-2.5 px-4 rounded-xl shadow-sm transition-all flex items-center justify-center text-sm">
-                    <span class="material-icons text-sm mr-2">file_download</span> Download CSV
+                    class="mt-6 w-full bg-emerald-600 hover:bg-emerald-700 active:bg-emerald-800 text-white font-semibold py-2.5 px-3 rounded-xl shadow-sm transition-all flex items-center justify-center text-xs">
+                    <span class="material-icons text-sm mr-1.5">file_download</span> Download CSV
                 </button>
             </div>
 
-            <!-- Clear Database Card -->
-            <div class="bg-white rounded-2xl p-6 shadow-sm border border-red-100 flex flex-col justify-between">
+            <!-- Clear Attendance Database Card -->
+            <div class="bg-white rounded-2xl p-6 shadow-sm border border-amber-100 flex flex-col justify-between">
                 <div>
-                    <div class="w-10 h-10 bg-red-50 text-red-600 rounded-xl flex items-center justify-center mb-3">
+                    <div class="w-10 h-10 bg-amber-50 text-amber-600 rounded-xl flex items-center justify-center mb-3">
                         <span class="material-icons">delete_sweep</span>
                     </div>
-                    <h3 class="text-base font-bold text-slate-900">Clear Database</h3>
+                    <h3 class="text-base font-bold text-slate-900">Clear Records</h3>
                     <p class="text-xs text-slate-500 mt-1">Reset attendance records, clear active sessions, and wipe local browser storage.</p>
                 </div>
                 <button onclick="openClearModal()"
-                    class="mt-6 w-full bg-red-50 hover:bg-red-100 text-red-600 border border-red-200 font-semibold py-2.5 px-4 rounded-xl transition-all flex items-center justify-center text-sm">
-                    <span class="material-icons text-sm mr-2">delete_forever</span> Clear Database
+                    class="mt-6 w-full bg-amber-50 hover:bg-amber-100 text-amber-700 border border-amber-200 font-semibold py-2.5 px-3 rounded-xl transition-all flex items-center justify-center text-xs">
+                    <span class="material-icons text-sm mr-1.5">cleaning_services</span> Clear Records
+                </button>
+            </div>
+
+            <!-- Delete WhatsApp Session DB Card -->
+            <div class="bg-white rounded-2xl p-6 shadow-sm border border-red-100 flex flex-col justify-between">
+                <div>
+                    <div class="w-10 h-10 bg-red-50 text-red-600 rounded-xl flex items-center justify-center mb-3">
+                        <span class="material-icons">phonelink_erase</span>
+                    </div>
+                    <h3 class="text-base font-bold text-slate-900">Delete Session DB</h3>
+                    <p class="text-xs text-slate-500 mt-1">Unlink WhatsApp, wipe session.db, and regenerate fresh QR code.</p>
+                </div>
+                <button onclick="openDeleteSessionModal()"
+                    class="mt-6 w-full bg-red-50 hover:bg-red-100 text-red-600 border border-red-200 font-semibold py-2.5 px-3 rounded-xl transition-all flex items-center justify-center text-xs">
+                    <span class="material-icons text-sm mr-1.5">delete_forever</span> Delete session.db
                 </button>
             </div>
         </div>
@@ -137,15 +152,15 @@
             </div>
         </div>
 
-        <!-- Clear Confirmation Modal -->
+        <!-- Clear Attendance Confirmation Modal -->
         <div id="clearModal" class="hidden fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
             <div class="bg-white rounded-2xl max-w-sm w-full p-6 shadow-2xl border border-slate-200 text-center animate-in fade-in zoom-in duration-150">
-                <div class="w-14 h-14 bg-red-100 text-red-600 rounded-2xl flex items-center justify-center mx-auto mb-4">
+                <div class="w-14 h-14 bg-amber-100 text-amber-600 rounded-2xl flex items-center justify-center mx-auto mb-4">
                     <span class="material-icons text-3xl">warning</span>
                 </div>
-                <h3 class="text-lg font-bold text-slate-900 mb-1">Clear All Records?</h3>
+                <h3 class="text-lg font-bold text-slate-900 mb-1">Clear Attendance Records?</h3>
                 <p class="text-xs text-slate-500 mb-6">
-                    This will permanently delete all attendance records from the CSV database, clear active sessions, and reset browser storage. This action cannot be undone.
+                    This will permanently delete all attendance records from the CSV database, clear active sessions, and reset browser storage.
                 </p>
                 <div class="flex gap-3">
                     <button onclick="closeClearModal()"
@@ -153,8 +168,31 @@
                         Cancel
                     </button>
                     <button id="confirmClearBtn" onclick="executeClearDatabase()"
-                        class="flex-1 bg-red-600 hover:bg-red-700 text-white font-semibold py-2.5 rounded-xl text-sm transition-colors flex items-center justify-center">
+                        class="flex-1 bg-amber-600 hover:bg-amber-700 text-white font-semibold py-2.5 rounded-xl text-sm transition-colors flex items-center justify-center">
                         <span class="material-icons text-sm mr-1.5">delete_forever</span> Yes, Clear
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Delete Session DB Confirmation Modal -->
+        <div id="deleteSessionModal" class="hidden fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+            <div class="bg-white rounded-2xl max-w-sm w-full p-6 shadow-2xl border border-slate-200 text-center animate-in fade-in zoom-in duration-150">
+                <div class="w-14 h-14 bg-red-100 text-red-600 rounded-2xl flex items-center justify-center mx-auto mb-4">
+                    <span class="material-icons text-3xl">phonelink_erase</span>
+                </div>
+                <h3 class="text-lg font-bold text-slate-900 mb-1">Delete WhatsApp Session?</h3>
+                <p class="text-xs text-slate-500 mb-6">
+                    This will immediately disconnect WhatsApp, delete the <code class="text-red-500 font-mono">session.db</code> file from the server, and force a fresh QR code on next connect.
+                </p>
+                <div class="flex gap-3">
+                    <button onclick="closeDeleteSessionModal()"
+                        class="flex-1 bg-slate-100 hover:bg-slate-200 text-slate-700 font-semibold py-2.5 rounded-xl text-sm transition-colors">
+                        Cancel
+                    </button>
+                    <button id="confirmDeleteSessionBtn" onclick="executeDeleteSession()"
+                        class="flex-1 bg-red-600 hover:bg-red-700 text-white font-semibold py-2.5 rounded-xl text-sm transition-colors flex items-center justify-center">
+                        <span class="material-icons text-sm mr-1.5">delete_forever</span> Yes, Delete
                     </button>
                 </div>
             </div>
@@ -191,6 +229,14 @@
             document.getElementById('clearModal').classList.add('hidden');
         }
 
+        function openDeleteSessionModal() {
+            document.getElementById('deleteSessionModal').classList.remove('hidden');
+        }
+
+        function closeDeleteSessionModal() {
+            document.getElementById('deleteSessionModal').classList.add('hidden');
+        }
+
         function showToast(message, isError = false) {
             const toast = document.getElementById('toast');
             const toastMsg = document.getElementById('toastMsg');
@@ -216,7 +262,6 @@
                 const data = await res.json();
 
                 if (res.ok) {
-                    // Clear browser storage
                     try {
                         localStorage.clear();
                         sessionStorage.clear();
@@ -233,6 +278,29 @@
             } finally {
                 btn.disabled = false;
                 btn.innerHTML = '<span class="material-icons text-sm mr-1.5">delete_forever</span> Yes, Clear';
+            }
+        }
+
+        async function executeDeleteSession() {
+            const btn = document.getElementById('confirmDeleteSessionBtn');
+            btn.disabled = true;
+            btn.innerHTML = '<span class="material-icons text-sm mr-1.5 animate-spin">refresh</span> Deleting...';
+
+            try {
+                const res = await fetch(`${BACKEND_URL}/api/whatsapp/delete_session`, { method: 'POST' });
+                const data = await res.json();
+
+                if (res.ok) {
+                    closeDeleteSessionModal();
+                    showToast("WhatsApp session deleted! Re-pair via QR code.");
+                } else {
+                    showToast(data.message || "Failed to delete session", true);
+                }
+            } catch (err) {
+                showToast("Network error: Could not reach server", true);
+            } finally {
+                btn.disabled = false;
+                btn.innerHTML = '<span class="material-icons text-sm mr-1.5">delete_forever</span> Yes, Delete';
             }
         }
 
