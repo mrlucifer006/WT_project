@@ -1,16 +1,69 @@
+# Python bytecode & cache
 __pycache__/
-*.pyc
-.env
+*.py[cod]
+*$py.class
+*.so
+.Python
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+share/python-wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+MANIFEST
+
+# Virtual Environments
 venv/
 env/
+ENV/
+.venv/
+env.bak/
+venv.bak/
+
+# Environment Variables & Secrets
+.env
+.env.*
+secret.key
 credentials.json
 authorized_user.json
-my_session.sqlite3
-billing.db
+
+# SQLite Databases & Session Storage
+*.sqlite3*
+*.sqlite
+*.db
+*.db-*
+session*
+my_session*
 server_state.json
-generated_qrs/
 pending_keys.json
 sessions.json
+
+# Logs & Debugging
+*.log
+debug_*.txt
 debug_output.txt
 debug_fields.txt
-secret.key
+
+# Generated Assets
+generated_qrs/
+
+# OS Specific
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# IDE & Editor Configs
+.idea/
+.vscode/
+*.swp
+*.swo
