@@ -14,20 +14,27 @@
         }
     </style>
     <script src="config.js"></script>
+    <script src="auth.js"></script>
 </head>
 
 <body class="bg-slate-50 text-slate-900 min-h-screen p-6">
     <div class="max-w-7xl mx-auto">
         <!-- Header -->
-        <header class="flex justify-between items-center mb-8">
+        <header class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-8">
             <div>
                 <h1 class="text-2xl font-bold text-slate-900">Live Sessions</h1>
                 <p class="text-slate-500 text-sm">Real-time participant tracking</p>
             </div>
-            <a href="index.html"
-                class="bg-white border border-slate-300 text-slate-700 hover:bg-slate-50 px-4 py-2 rounded-lg text-sm font-medium transition-colors shadow-sm flex items-center">
-                <span class="material-icons text-sm mr-2">arrow_back</span> Back to Billing
-            </a>
+            <div class="flex gap-3">
+                <a href="index.html"
+                    class="bg-white border border-slate-300 text-slate-700 hover:bg-slate-50 px-4 py-2 rounded-lg text-sm font-medium transition-colors shadow-sm flex items-center">
+                    <span class="material-icons text-sm mr-2">arrow_back</span> New Pass
+                </a>
+                <button onclick="logout()"
+                    class="bg-red-50 border border-red-200 text-red-600 hover:bg-red-100 px-4 py-2 rounded-lg text-sm font-medium transition-colors shadow-sm flex items-center">
+                    <span class="material-icons text-sm mr-1.5">logout</span> Logout
+                </button>
+            </div>
         </header>
 
         <!-- Stats Overview -->

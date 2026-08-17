@@ -14,6 +14,7 @@
         }
     </style>
     <script src="config.js"></script>
+    <script src="auth.js"></script>
 </head>
 
 <body class="bg-slate-50 text-slate-900 min-h-screen flex flex-col items-center justify-center p-4">
@@ -139,6 +140,10 @@
             <a href="data.html" class="text-slate-600 hover:text-slate-900 hover:underline">
                 Records & CSV
             </a>
+            <span class="text-slate-300">|</span>
+            <button onclick="logout()" class="text-red-500 hover:text-red-700 hover:underline flex items-center">
+                <span class="material-icons text-xs mr-0.5">logout</span> Logout
+            </button>
         </div>
     </div>
 

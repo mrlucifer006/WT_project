@@ -1,4 +1,1 @@
-Timestamp,Name,Phone,Transaction ID,Amount,Duration,Status,Payment Mode,Plan
-2026-08-18 02:29:11,John Doe,9876543210,ENTRY-20260818-022911-426,30,Pending,General Entry
-2026-08-18 02:45:20,Sanjai MS,1234567890,ENTRY-20260818-024520-213,180,Pending,Participant
-2026-08-18 02:45:34,Sanjai MS,1234567890,ENTRY-20260818-001,180,Pending,Participant
+Timestamp,Name,Phone,Entry ID,Duration,Status,Entry Type

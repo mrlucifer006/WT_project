@@ -192,10 +192,86 @@ async def download_csv():
         return FileResponse(path=file_path, filename="transactions.csv", media_type="text/csv")
     return JSONResponse(status_code=404, content={"message": "CSV not found"})
 
+@app.post("/api/csv/clear")
+async def clear_database():
+    global active_sessions, pending_keys
+    success = csv_service.clear_data()
+    active_sessions.clear()
+    save_sessions()
+    pending_keys.clear()
+    save_pending_keys()
+    if success:
+        return {"status": "success", "message": "Database and active records cleared successfully"}
+    return JSONResponse(status_code=500, content={"status": "error", "message": "Failed to clear database"})
+
 @app.post("/api/whatsapp/logout")
 async def wa_logout():
     whatsapp_service.logout()
     return {"status": "logged out"}
+
+@app.post("/api/auth/login")
+async def auth_login(request: Request):
+    username = ""
+    password = ""
+    
+    # Try JSON body
+    try:
+        data = await request.json()
+        username = data.get("username") or data.get("admin_id") or ""
+        password = data.get("password") or ""
+    except Exception:
+        pass
+        
+    # If not JSON, try Form data
+    if not username and not password:
+        try:
+            form = await request.form()
+            username = form.get("username") or form.get("admin_id") or ""
+            password = form.get("password") or ""
+        except Exception:
+            pass
+
+    if settings.check_admin_credentials(username, password):
+        auth_data = {
+            "authenticated": True,
+            "admin": username,
+            "exp": (datetime.now() + timedelta(days=7)).isoformat()
+        }
+        token = crypto_service.encrypt(auth_data)
+        return {
+            "status": "success",
+            "message": "Authenticated successfully",
+            "token": token,
+            "admin": username
+        }
+    else:
+        return JSONResponse(
+            status_code=401,
+            content={"status": "error", "message": "Invalid Admin ID or Password"}
+        )
+
+@app.post("/api/auth/verify")
+async def auth_verify(request: Request):
+    token = None
+    try:
+        data = await request.json()
+        token = data.get("token")
+    except Exception:
+        try:
+            form = await request.form()
+            token = form.get("token")
+        except Exception:
+            pass
+        
+    if token:
+        try:
+            auth_data = crypto_service.decrypt(token)
+            if auth_data.get("authenticated"):
+                return {"status": "valid", "admin": auth_data.get("admin")}
+        except Exception:
+            pass
+            
+    return JSONResponse(status_code=401, content={"status": "invalid", "message": "Session expired or invalid"})
 
 def render_scan_html(status: str, name: str = "", phone: str = "", transaction_id: str = "", duration: int = 15, plan: str = "General Entry", message: str = "") -> str:
     if status == "success":

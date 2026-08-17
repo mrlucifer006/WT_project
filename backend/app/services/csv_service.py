@@ -142,4 +142,19 @@ class CSVService:
             print(f"Error getting status: {e}")
             return None
 
+    def clear_data(self) -> bool:
+        """Wipes the CSV file and resets the header row."""
+        try:
+            with open(self.file_path, mode="w", newline="", encoding="utf-8") as f:
+                writer = csv.writer(f)
+                writer.writerow([
+                    "Timestamp", "Name", "Phone", "Entry ID", 
+                    "Duration", "Status", "Entry Type"
+                ])
+            print("CSV database cleared and reset.")
+            return True
+        except Exception as e:
+            print(f"Error clearing CSV database: {e}")
+            return False
+
 csv_service = CSVService()

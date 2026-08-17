@@ -62,6 +62,7 @@ Billing/
 | `/api/whatsapp/qr_image` | `GET` | Direct PNG image stream of WhatsApp pairing QR |
 | `/api/whatsapp/logout` | `POST` | Disconnects and deletes session DB |
 | `/api/csv/download` | `GET` | Streams `transactions.csv` to admin |
+| `/api/csv/clear` | `POST` | Clears all records from CSV database, resets sessions, and wipes storage |
 | `/submit_entry` | `POST` | Generates QR pass, logs to CSV, and sends WhatsApp message |
 | `/verify` | `GET` | Decrypts and validates QR token against pending keys |
 | `/start_timer` | `POST` | Starts active session countdown and WhatsApp notifications |

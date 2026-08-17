@@ -36,9 +36,9 @@ The system is split into two components:
      ```
 4. **Set Environment Variables**:
    Under the **Environment Variables** section in Render, add:
-   - `ADMIN_PHONE`: Your WhatsApp phone number with country code (e.g., `919876543210`).
-   - `ADMIN_USERNAME`: Admin login username (e.g., `admin`).
+   - `ADMIN_ID` (or `ADMIN_USERNAME`): Admin login ID (e.g., `admin`).
    - `ADMIN_PASSWORD`: Admin login password (e.g., `adminpassword`).
+   - `ADMIN_PHONE`: Your WhatsApp phone number with country code (e.g., `919876543210`).
    - `WHATSAPP_SESSION_NAME`: `my_session`
    - `WARNING_BUFFER_MINUTES`: `5`
 5. **Deploy**:
