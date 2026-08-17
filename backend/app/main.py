@@ -191,37 +191,19 @@ async def submit_entry(
     background_tasks: BackgroundTasks, 
     name: str = Form(...),
     phone: str = Form(...),
-    transaction_id: str = Form(None),
-    plan_selection: str = Form(...),
-    payment_mode: str = Form(...)
+    entry_type: str = Form("General Entry"),
+    duration: int = Form(15)
 ):
     """
-    Endpoint to trigger individual processing.
+    Endpoint to trigger individual entry pass processing.
     """
-    # Validate Transaction ID for Online payments
-    if payment_mode == "online":
-         if not transaction_id:
-             return JSONResponse(
-                 status_code=400,
-                 content={"status": "Error", "message": "Transaction ID is required for Online payments"}
-             )
-         # Check for duplicate transaction ID
-         if "":
-             if csv_service.check_transaction_exists(transaction_id):
-                 return JSONResponse(
-                     status_code=400, 
-                     content={"status": "Error", "message": "Transaction ID already exists"}
-                 )
-    else:
-        # Generate Cash Transaction ID
-        import random
-        # Format: CASH-YYYYMMDD-HHMMSS-XXX
-        timestamp_part = datetime.now().strftime("%Y%m%d-%H%M%S")
-        random_part = str(random.randint(100, 999))
-        transaction_id = f"CASH-{timestamp_part}-{random_part}"
+    import random
+    timestamp_part = datetime.now().strftime("%Y%m%d-%H%M%S")
+    random_part = str(random.randint(100, 999))
+    transaction_id = f"ENTRY-{timestamp_part}-{random_part}"
 
-    background_tasks.add_task(process_entry_task, name, phone, transaction_id, plan_selection, payment_mode)
-    return {"status": "Processing started", "message": "QR generation initiated"}
+    background_tasks.add_task(process_entry_task, name, phone, transaction_id, entry_type, duration)
+    return {"status": "Processing started", "message": "Entry pass generation initiated", "entry_id": transaction_id}
 
 @app.get("/verify", response_class=HTMLResponse)
 async def verify_entry(request: Request, token: str):
@@ -236,7 +218,7 @@ async def verify_entry(request: Request, token: str):
             name = data.get("name")
             phone = data.get("phone")
             duration = data.get("duration", 15)
-            plan = data.get("plan", "Unknown") # New Field
+            plan = data.get("plan", "General Entry")
             secure_key = data.get("secure_key")
         except Exception:
             return templates.TemplateResponse(request, "scan_result.html", {
@@ -247,8 +229,6 @@ async def verify_entry(request: Request, token: str):
 
         # Validate Security Key
         # 1. Check if ACTIVE SESSION exists (Reload support)
-        # We check this FIRST because if a session is active, the key is already removed from pending_keys,
-        # so the pending_keys check below would assume it's invalid/expired.
         if transaction_id in active_sessions:
              return templates.TemplateResponse(request, "scan_result.html", {
                 "request": request,
@@ -274,7 +254,7 @@ async def verify_entry(request: Request, token: str):
                  return templates.TemplateResponse(request, "scan_result.html", {
                     "request": request,
                     "status": "error",
-                    "message": "Invalid QR Code: Transaction not found or expired."
+                    "message": "Invalid QR Code: Entry not found or expired."
                  })
         
         if pending_keys[transaction_id] != secure_key:
@@ -284,18 +264,11 @@ async def verify_entry(request: Request, token: str):
                 "message": "Security Check Failed: Invalid Key."
             })
 
-        # Check current status
-        # If transaction is in pending_keys, we allow "In" status (re-scan case).
-        # If transaction is NOT in pending_keys, it is handled by the first check.
-        
-        # Update Google Sheets
+        # Update CSV status
         csv_service.update_entry_status(transaction_id, "In")
         
-        # Note: We do NOT remove the key here anymore. 
-        # It will be removed in /start_timer to allow re-scanning if browser is closed.
-        
         # Send WhatsApp Message
-        msg = f"Welcome {name}! Your entry is confirmed. Please ask the admin to start your {duration} mins session."
+        msg = f"Welcome {name}! Your entry is confirmed. Please proceed to the check-in desk for your {duration} mins session."
         whatsapp_service.send_message(phone, msg)
         
         return templates.TemplateResponse(request, "scan_result.html", {
@@ -305,7 +278,7 @@ async def verify_entry(request: Request, token: str):
             "transaction_id": transaction_id,
             "duration": duration,
             "plan": plan,
-            "phone": phone, # Needed for starting timer
+            "phone": phone,
             "time": datetime.now().strftime("%Y-%m-%d %H:%M:%S")
         })
         
@@ -343,30 +316,10 @@ def save_pending_keys():
 # Load keys on startup
 load_pending_keys()
 
-def process_entry_task(name: str, phone: str, transaction_id: str, plan_selection: str, payment_mode: str):
+def process_entry_task(name: str, phone: str, transaction_id: str, entry_type: str = "General Entry", duration: int = 15):
     from app.config import log_debug
     import secrets
-    log_debug(f"Starting task for: {name}, {phone}, {transaction_id}, {plan_selection}, {payment_mode}")
-    
-    # Parse Plan
-    try:
-        if plan_selection == "premium_50":
-            amount = 50
-            duration = 15
-            plan_name = "Premium"
-        elif plan_selection == "standard_40":
-            amount = 40
-            duration = 15
-            plan_name = "Standard"
-        else:
-            # Fallback or Error
-            amount = 0
-            duration = 0
-            plan_name = "Unknown"
-    except Exception:
-        amount = 0
-        duration = 0
-        plan_name = "Error"
+    log_debug(f"Starting entry task for: {name}, {phone}, {transaction_id}, {entry_type}, {duration}m")
     
     # 1. Clean Phone
     phone = phone.replace(" ", "").replace("-", "").replace("+", "")
@@ -384,8 +337,7 @@ def process_entry_task(name: str, phone: str, transaction_id: str, plan_selectio
         "name": name,
         "phone": phone,
         "duration": duration,
-        "amount": amount,
-        "plan": plan_name,
+        "plan": entry_type,
         "secure_key": secure_key
     }
     
@@ -410,20 +362,17 @@ def process_entry_task(name: str, phone: str, transaction_id: str, plan_selectio
         log_debug(f"QR Generation failed: {e}")
         return
 
-    # 5. Save to Google Sheets
-    if "":
-        try:
-            timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-            # Order: Timestamp, Name, Phone, Transaction ID, Amount, Duration, Status, Payment Mode, Plan
-            row_data = [timestamp, name, phone, transaction_id, amount, duration, "Pending", payment_mode, plan_name]
-            csv_service.append_data(row_data)
-        except Exception as e:
-            log_debug(f"Failed to save to Google Sheets: {e}")
-    else:
-        log_debug("Skipping Google Sheets save: SHEET_URL not set.")
+    # 5. Save to CSV
+    try:
+        timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+        # Order: Timestamp, Name, Phone, Entry ID, Duration, Status, Entry Type
+        row_data = [timestamp, name, phone, transaction_id, duration, "Pending", entry_type]
+        csv_service.append_data(row_data)
+    except Exception as e:
+        log_debug(f"Failed to save to CSV: {e}")
 
     # 6. Send Message via WhatsApp
-    caption = f"Hello {name}, your {payment_mode} transaction ({transaction_id}) for {plan_name} - INR {amount} ({duration} mins) is confirmed. Here is your unique QR code."
+    caption = f"Hello {name}, your entry pass ({transaction_id}) for {entry_type} ({duration} mins) is confirmed. Here is your unique QR pass."
     
     try:
         log_debug(f"Attempting to send QR to {phone}")
@@ -461,14 +410,26 @@ async def hourly_stats_task():
                 await asyncio.sleep(wait_seconds)
             
             # --- Perform Task ---
-            stats = csv_service.get_stats_for_today("")
+            stats = csv_service.get_stats_for_today()
             
             msg = (
                 f"Hourly Report\n"
                 f"Date: {datetime.now().strftime('%Y-%m-%d')}\n"
-                f"Total Entries: {stats['count']}\n"
-                f"Total Collected: INR {stats['total']}"
+                f"Total Entries: {stats['count']}"
             )
+            
+            print(f"Sending Hourly Report: {msg}")
+            whatsapp_service.send_message(settings.ADMIN_PHONE, msg)
+            
+            # --- Update State ---
+            new_now = datetime.now()
+            save_server_state({"last_hourly_report": new_now.isoformat()})
+            
+            await asyncio.sleep(1) 
+            
+        except Exception as e:
+            print(f"Error in hourly stats task: {e}")
+            await asyncio.sleep(60)
             
             print(f"Sending Hourly Report: {msg}")
             whatsapp_service.send_message(settings.ADMIN_PHONE, msg)
@@ -637,6 +598,16 @@ async def get_health_stats():
     return {
         "active_sessions": len(active_sessions),
         "server_time": datetime.now().isoformat()
+    }
+
+@app.get("/api/stats")
+async def get_stats():
+    daily = csv_service.get_stats_for_today()
+    total = csv_service.get_total_stats()
+    return {
+        "total_entries": total.get("count", 0),
+        "today_entries": daily.get("count", 0),
+        "active_sessions": len(active_sessions)
     }
 
 @app.get("/api/sessions")

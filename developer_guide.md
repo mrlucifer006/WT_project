@@ -45,7 +45,7 @@ Billing/
 ### `backend/app/services/csv_service.py`
 - Replaces Google Sheets API with local file-based append and query operations.
 - Schema:
-  `Timestamp`, `Name`, `Phone`, `Transaction ID`, `Amount`, `Duration`, `Status`, `Payment Mode`, `Plan`
+  `Timestamp`, `Name`, `Phone`, `Entry ID`, `Duration`, `Status`, `Entry Type`
 - Thread-safe append and status updates.
 
 ### `backend/app/services/crypto.py`
@@ -61,10 +61,11 @@ Billing/
 | `/api/whatsapp/qr` | `GET` | Returns `{ "qr_code": str }` for pairing |
 | `/api/whatsapp/logout` | `POST` | Disconnects and deletes session DB |
 | `/api/csv/download` | `GET` | Streams `transactions.csv` to admin |
-| `/submit_entry` | `POST` | Generates QR, logs to CSV, and sends WhatsApp message |
+| `/submit_entry` | `POST` | Generates QR pass, logs to CSV, and sends WhatsApp message |
 | `/verify` | `GET` | Decrypts and validates QR token against pending keys |
 | `/start_timer` | `POST` | Starts active session countdown and WhatsApp notifications |
 | `/api/sessions` | `GET` | Returns live active sessions for participants dashboard |
+| `/api/stats` | `GET` | Returns attendance statistics (total, today, active) |
 | `/api/health_stats` | `GET` | Returns server health and active session count |
 
 ---

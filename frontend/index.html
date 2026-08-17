@@ -4,42 +4,8 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Ticket System</title>
-    <script src="https://cdn.tailwindcss.com">
-        // WhatsApp QR Check
-        async function checkWhatsAppStatus() {
-            try {
-                const response = await fetch(`${BACKEND_URL}/api/whatsapp/status`);
-                const data = await response.json();
-                
-                const qrModal = document.getElementById('qrModal');
-                const qrContainer = document.getElementById('qrContainer');
-                
-                if (!data.connected) {
-                    qrModal.classList.remove('hidden');
-                    if (data.qr_ready) {
-                        const qrRes = await fetch(`${BACKEND_URL}/api/whatsapp/qr`);
-                        const qrData = await qrRes.json();
-                        if (qrData.qr_code) {
-                            // Generating QR image from string (Assuming basic or we can just fetch an image endpoint if we had one)
-                            // But neonize gives string. We need to render it. The backend currently uses qrcode lib to save to file.
-                            // Let's assume backend serves the image at /api/whatsapp/qr?image=true or something, but our updated backend just returns JSON for now.
-                            // Actually, qrData.qr_code is the raw string. We can use a JS library to render it, or we just need the backend to render it.
-                            qrContainer.innerHTML = `<img src="https://api.qrserver.com/v1/create-qr-code/?size=250x250&data=${encodeURIComponent(qrData.qr_code)}" alt="QR Code" class="w-64 h-64 mx-auto"/>`;
-                        }
-                    }
-                } else {
-                    qrModal.classList.add('hidden');
-                }
-            } catch (e) {
-                console.error("Failed to check WA status:", e);
-            }
-        }
-        
-        setInterval(checkWhatsAppStatus, 5000);
-        checkWhatsAppStatus();
-
-    </script>
+    <title>Event Pass & Verification System</title>
+    <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
     <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
     <style>
@@ -47,164 +13,117 @@
             font-family: 'Inter', sans-serif;
         }
     </style>
-    <script src="config.js">
-        // WhatsApp QR Check
-        async function checkWhatsAppStatus() {
-            try {
-                const response = await fetch(`${BACKEND_URL}/api/whatsapp/status`);
-                const data = await response.json();
-                
-                const qrModal = document.getElementById('qrModal');
-                const qrContainer = document.getElementById('qrContainer');
-                
-                if (!data.connected) {
-                    qrModal.classList.remove('hidden');
-                    if (data.qr_ready) {
-                        const qrRes = await fetch(`${BACKEND_URL}/api/whatsapp/qr`);
-                        const qrData = await qrRes.json();
-                        if (qrData.qr_code) {
-                            // Generating QR image from string (Assuming basic or we can just fetch an image endpoint if we had one)
-                            // But neonize gives string. We need to render it. The backend currently uses qrcode lib to save to file.
-                            // Let's assume backend serves the image at /api/whatsapp/qr?image=true or something, but our updated backend just returns JSON for now.
-                            // Actually, qrData.qr_code is the raw string. We can use a JS library to render it, or we just need the backend to render it.
-                            qrContainer.innerHTML = `<img src="https://api.qrserver.com/v1/create-qr-code/?size=250x250&data=${encodeURIComponent(qrData.qr_code)}" alt="QR Code" class="w-64 h-64 mx-auto"/>`;
-                        }
-                    }
-                } else {
-                    qrModal.classList.add('hidden');
-                }
-            } catch (e) {
-                console.error("Failed to check WA status:", e);
-            }
-        }
-        
-        setInterval(checkWhatsAppStatus, 5000);
-        checkWhatsAppStatus();
-
-    </script>
+    <script src="config.js"></script>
 </head>
 
 <body class="bg-slate-50 text-slate-900 min-h-screen flex flex-col items-center justify-center p-4">
 
-    
     <!-- WhatsApp QR Modal -->
-    <div id="qrModal" class="fixed inset-0 bg-slate-900 bg-opacity-75 hidden flex items-center justify-center z-50">
-        <div class="bg-white p-8 rounded-xl shadow-2xl text-center max-w-sm w-full">
-            <h2 class="text-xl font-bold mb-4">WhatsApp Login Required</h2>
-            <p class="text-sm text-slate-500 mb-6">Scan the QR code below with your WhatsApp to connect the session.</p>
-            <div id="qrContainer" class="flex justify-center mb-6 min-h-[256px] bg-slate-50 rounded-lg p-2">
-                <div class="animate-pulse flex items-center text-slate-400">Loading QR...</div>
+    <div id="qrModal" class="fixed inset-0 bg-slate-900/80 backdrop-blur-sm hidden flex items-center justify-center z-50 p-4">
+        <div class="bg-white p-8 rounded-2xl shadow-2xl text-center max-w-sm w-full border border-slate-100">
+            <div class="w-12 h-12 bg-emerald-50 text-emerald-600 rounded-full flex items-center justify-center mx-auto mb-4">
+                <span class="material-icons text-2xl">qr_code_scanner</span>
             </div>
-            <p class="text-xs text-slate-400">Waiting for connection...</p>
+            <h2 class="text-xl font-bold text-slate-900 mb-1">WhatsApp Login Required</h2>
+            <p class="text-xs text-slate-500 mb-5">Scan this QR code with WhatsApp (Linked Devices) to activate notifications.</p>
+            <div id="qrContainer" class="flex justify-center mb-5 min-h-[220px] bg-slate-50 rounded-xl p-3 border border-slate-100 flex items-center">
+                <div class="animate-pulse flex items-center text-slate-400 text-xs font-medium">
+                    <span class="material-icons animate-spin text-sm mr-2">refresh</span> Generating QR Code...
+                </div>
+            </div>
+            <p class="text-[11px] text-slate-400">Status will update automatically once scanned</p>
         </div>
     </div>
 
-    <div class="w-full max-w-md bg-white rounded-xl shadow-lg overflow-hidden border border-slate-200">
+    <!-- Main Container -->
+    <div class="w-full max-w-md bg-white rounded-2xl shadow-xl overflow-hidden border border-slate-200">
         <!-- Header -->
-        <div class="bg-slate-900 px-6 py-6 text-center">
-            <h1 class="text-2xl font-bold text-white tracking-tight">Event Ticketing</h1>
-            <p class="text-slate-400 text-sm mt-1">Ticket Booking System</p>
+        <div class="bg-gradient-to-r from-slate-900 via-slate-800 to-indigo-950 px-6 py-6 text-center text-white">
+            <div class="inline-flex items-center justify-center w-10 h-10 bg-indigo-500/20 rounded-xl text-indigo-300 mb-2">
+                <span class="material-icons text-xl">badge</span>
+            </div>
+            <h1 class="text-2xl font-bold tracking-tight">Event Entry Pass</h1>
+            <p class="text-slate-300 text-xs mt-1">Registration & Instant QR Pass Generator</p>
         </div>
 
         <!-- Form -->
         <div class="p-6">
             <form id="submissionForm" class="space-y-4">
 
-                <!-- Name -->
+                <!-- Full Name -->
                 <div>
-                    <label class="block text-xs font-semibold text-slate-600 uppercase tracking-wide mb-1">Full
-                        Name</label>
-                    <input type="text" name="name" required placeholder="Enter participant name"
-                        class="w-full px-4 py-2 bg-slate-50 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all text-sm">
+                    <label class="block text-xs font-semibold text-slate-600 uppercase tracking-wider mb-1.5">
+                        Full Name
+                    </label>
+                    <div class="relative">
+                        <span class="material-icons absolute left-3.5 top-2.5 text-slate-400 text-sm">person</span>
+                        <input type="text" name="name" required placeholder="e.g. Alex Johnson"
+                            class="w-full pl-10 pr-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:bg-white transition-all text-sm">
+                    </div>
                 </div>
 
                 <!-- Phone -->
                 <div>
-                    <label class="block text-xs font-semibold text-slate-600 uppercase tracking-wide mb-1">Phone
-                        Number</label>
-                    <input type="tel" name="phone" required placeholder="10-digit number" pattern="[0-9]{10}"
-                        class="w-full px-4 py-2 bg-slate-50 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all text-sm">
+                    <label class="block text-xs font-semibold text-slate-600 uppercase tracking-wider mb-1.5">
+                        WhatsApp Number
+                    </label>
+                    <div class="relative">
+                        <span class="material-icons absolute left-3.5 top-2.5 text-slate-400 text-sm">phone</span>
+                        <input type="tel" name="phone" required placeholder="10-digit mobile number" pattern="[0-9]{10}"
+                            class="w-full pl-10 pr-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:bg-white transition-all text-sm font-mono">
+                    </div>
+                    <p class="text-[11px] text-slate-400 mt-1">The QR Pass will be dispatched to this WhatsApp number.</p>
                 </div>
 
-                <!-- Payment Mode -->
+                <!-- Pass Category -->
                 <div>
-                    <label class="block text-xs font-semibold text-slate-600 uppercase tracking-wide mb-1">Payment
-                        Mode</label>
-                    <div class="flex space-x-4">
-                        <label class="flex items-center space-x-2 cursor-pointer">
-                            <input type="radio" name="payment_mode" value="online"
-                                class="text-blue-600 focus:ring-blue-500" checked onchange="toggleTransactionId()">
-                            <span class="text-sm text-slate-700">Online (GPay/UPI)</span>
-                        </label>
-                        <label class="flex items-center space-x-2 cursor-pointer">
-                            <input type="radio" name="payment_mode" value="cash"
-                                class="text-blue-600 focus:ring-blue-500" onchange="toggleTransactionId()">
-                            <span class="text-sm text-slate-700">Cash</span>
-                        </label>
+                    <label class="block text-xs font-semibold text-slate-600 uppercase tracking-wider mb-1.5">
+                        Pass Category / Type
+                    </label>
+                    <div class="relative">
+                        <span class="material-icons absolute left-3.5 top-2.5 text-slate-400 text-sm">category</span>
+                        <select name="entry_type" class="w-full pl-10 pr-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:bg-white transition-all text-sm font-medium text-slate-700">
+                            <option value="General Entry" selected>General Entry</option>
+                            <option value="Participant">Participant</option>
+                            <option value="VIP Guest">VIP Guest</option>
+                            <option value="Staff / Organizer">Staff / Organizer</option>
+                            <option value="Speaker / Performer">Speaker / Performer</option>
+                        </select>
                     </div>
                 </div>
 
-                <!-- Transaction ID -->
-                <div id="transactionIdField">
-                    <label class="block text-xs font-semibold text-slate-600 uppercase tracking-wide mb-1">Transaction
-                        ID</label>
-                    <input type="text" name="transaction_id" id="transaction_input" required
-                        placeholder="UPI Reference ID"
-                        class="w-full px-4 py-2 bg-slate-50 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all text-sm font-mono">
-                </div>
-
-                <!-- Amount / Duration -->
+                <!-- Duration -->
                 <div>
-                    <label class="block text-xs font-semibold text-slate-600 uppercase tracking-wide mb-1">Select
-                        Ticket</label>
-                    <div class="grid grid-cols-2 gap-4">
-                        <!-- Premium Plan -->
-                        <label class="cursor-pointer group">
-                            <input type="radio" name="plan_selection" value="premium_50" class="peer sr-only" required>
-                            <div
-                                class="rounded-xl border-2 border-slate-200 p-4 text-center hover:border-blue-400 hover:bg-blue-50 peer-checked:border-blue-600 peer-checked:bg-blue-50 peer-checked:text-blue-700 transition-all h-full flex flex-col justify-center relative overflow-hidden">
-
-                                <div
-                                    class="absolute top-0 right-0 bg-blue-600 text-white text-[10px] font-bold px-2 py-0.5 rounded-bl-lg">
-                                    PREMIUM</div>
-
-                                <div class="text-2xl font-bold mb-1">₹50</div>
-                                <div class="text-xs text-slate-500 font-medium uppercase tracking-wider">15 Mins</div>
-                            </div>
-                        </label>
-
-                        <!-- Standard Plan -->
-                        <label class="cursor-pointer group">
-                            <input type="radio" name="plan_selection" value="standard_40" class="peer sr-only">
-                            <div
-                                class="rounded-xl border-2 border-slate-200 p-4 text-center hover:border-purple-400 hover:bg-purple-50 peer-checked:border-purple-600 peer-checked:bg-purple-50 peer-checked:text-purple-700 transition-all h-full flex flex-col justify-center relative overflow-hidden">
-
-                                <div
-                                    class="absolute top-0 right-0 bg-purple-600 text-white text-[10px] font-bold px-2 py-0.5 rounded-bl-lg">
-                                    STANDARD</div>
-
-                                <div class="text-2xl font-bold mb-1">₹40</div>
-                                <div class="text-xs text-slate-500 font-medium uppercase tracking-wider">15 Mins</div>
-                            </div>
-                        </label>
+                    <label class="block text-xs font-semibold text-slate-600 uppercase tracking-wider mb-1.5">
+                        Session Duration
+                    </label>
+                    <div class="relative">
+                        <span class="material-icons absolute left-3.5 top-2.5 text-slate-400 text-sm">schedule</span>
+                        <select name="duration" class="w-full pl-10 pr-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:bg-white transition-all text-sm font-medium text-slate-700">
+                            <option value="15" selected>15 Minutes</option>
+                            <option value="30">30 Minutes</option>
+                            <option value="60">60 Minutes (1 Hour)</option>
+                            <option value="120">120 Minutes (2 Hours)</option>
+                            <option value="180">Full Day Access</option>
+                        </select>
                     </div>
                 </div>
 
                 <!-- Submit Button -->
                 <button type="submit" id="submitBtn"
-                    class="w-full bg-slate-900 hover:bg-slate-800 text-white font-medium py-3 rounded-lg shadow-md hover:shadow-lg transition-all flex items-center justify-center mt-6">
-                    <span class="material-icons text-sm mr-2">send</span> Process Entry
+                    class="w-full bg-indigo-600 hover:bg-indigo-700 active:bg-indigo-800 text-white font-semibold py-3 rounded-xl shadow-md hover:shadow-lg transition-all flex items-center justify-center mt-6">
+                    <span class="material-icons text-sm mr-2">send</span> Generate Entry Pass
                 </button>
 
                 <!-- Messages -->
                 <div id="errorMessage"
-                    class="hidden mt-4 p-3 bg-red-50 text-red-700 rounded-lg text-xs font-medium border border-red-100 flex items-center">
+                    class="hidden mt-4 p-3 bg-red-50 text-red-700 rounded-xl text-xs font-medium border border-red-100 flex items-center">
                     <span class="material-icons text-sm mr-2">error_outline</span>
                     <span id="errorText">Error</span>
                 </div>
 
                 <div id="successMessage"
-                    class="hidden mt-4 p-3 bg-green-50 text-green-700 rounded-lg text-xs font-medium border border-green-100 flex items-center">
+                    class="hidden mt-4 p-3 bg-emerald-50 text-emerald-700 rounded-xl text-xs font-medium border border-emerald-100 flex items-center">
                     <span class="material-icons text-sm mr-2">check_circle</span>
                     <span id="successText">Success</span>
                 </div>
@@ -212,10 +131,13 @@
         </div>
 
         <!-- Footer Link -->
-        <div class="bg-slate-50 px-6 py-4 text-center border-t border-slate-200">
-            <a href="participants.html"
-                class="text-xs text-blue-600 hover:text-blue-800 font-medium hover:underline transition-colors">
-                View Live Dashboard
+        <div class="bg-slate-50 px-6 py-4 text-center border-t border-slate-100 flex justify-between items-center text-xs font-medium">
+            <a href="participants.html" class="text-indigo-600 hover:text-indigo-800 hover:underline">
+                Active Participants
+            </a>
+            <span class="text-slate-300">|</span>
+            <a href="data.html" class="text-slate-600 hover:text-slate-900 hover:underline">
+                Records & CSV
             </a>
         </div>
     </div>
@@ -228,24 +150,38 @@
         const errorText = document.getElementById('errorText');
         const successMessage = document.getElementById('successMessage');
         const successText = document.getElementById('successText');
-        const transactionIdField = document.getElementById('transactionIdField');
-        const transactionInput = document.getElementById('transaction_input');
 
-        function toggleTransactionId() {
-            const paymentMode = document.querySelector('input[name="payment_mode"]:checked').value;
-            if (paymentMode === 'online') {
-                transactionIdField.classList.remove('hidden');
-                transactionInput.required = true;
-            } else {
-                transactionIdField.classList.add('hidden');
-                transactionInput.required = false;
-                transactionInput.value = ''; // Clear value
+        // Check WhatsApp Status & Show QR
+        async function checkWhatsAppStatus() {
+            try {
+                const response = await fetch(`${BACKEND_URL}/api/whatsapp/status`);
+                if (!response.ok) return;
+                const data = await response.json();
+                
+                const qrModal = document.getElementById('qrModal');
+                const qrContainer = document.getElementById('qrContainer');
+                
+                if (!data.connected) {
+                    qrModal.classList.remove('hidden');
+                    if (data.qr_ready) {
+                        const qrRes = await fetch(`${BACKEND_URL}/api/whatsapp/qr`);
+                        const qrData = await qrRes.json();
+                        if (qrData.qr_code) {
+                            qrContainer.innerHTML = `<img src="https://api.qrserver.com/v1/create-qr-code/?size=220x220&data=${encodeURIComponent(qrData.qr_code)}" alt="WhatsApp QR Code" class="w-52 h-52 mx-auto rounded-lg shadow-sm border border-slate-100"/>`;
+                        }
+                    }
+                } else {
+                    qrModal.classList.add('hidden');
+                }
+            } catch (e) {
+                console.error("Failed to check WA status:", e);
             }
         }
+        
+        setInterval(checkWhatsAppStatus, 5000);
+        checkWhatsAppStatus();
 
-        // Initial check
-        toggleTransactionId();
-
+        // Handle Form Submission
         form.addEventListener('submit', async (e) => {
             e.preventDefault();
 
@@ -267,57 +203,20 @@
 
                 if (response.ok) {
                     successMessage.classList.remove('hidden');
-                    successText.textContent = `Success: ${result.message}`;
+                    successText.textContent = `Success: Entry pass generated (${result.entry_id || 'Sent via WhatsApp'})`;
                     form.reset();
-                    // Reset to default state
-                    document.querySelector('input[name="payment_mode"][value="online"]').checked = true;
-                    toggleTransactionId();
                 } else {
                     errorMessage.classList.remove('hidden');
-                    errorText.textContent = result.message || 'Something went wrong';
+                    errorText.textContent = result.message || 'Failed to generate pass';
                 }
             } catch (error) {
                 errorMessage.classList.remove('hidden');
-                errorText.textContent = `Network Error: ${error.message}`;
+                errorText.textContent = `Network Error: Could not reach backend server`;
             } finally {
                 submitBtn.disabled = false;
-                submitBtn.innerHTML = '<span class="material-icons text-sm mr-2">send</span> Process Entry';
+                submitBtn.innerHTML = '<span class="material-icons text-sm mr-2">send</span> Generate Entry Pass';
             }
         });
-    
-        // WhatsApp QR Check
-        async function checkWhatsAppStatus() {
-            try {
-                const response = await fetch(`${BACKEND_URL}/api/whatsapp/status`);
-                const data = await response.json();
-                
-                const qrModal = document.getElementById('qrModal');
-                const qrContainer = document.getElementById('qrContainer');
-                
-                if (!data.connected) {
-                    qrModal.classList.remove('hidden');
-                    if (data.qr_ready) {
-                        const qrRes = await fetch(`${BACKEND_URL}/api/whatsapp/qr`);
-                        const qrData = await qrRes.json();
-                        if (qrData.qr_code) {
-                            // Generating QR image from string (Assuming basic or we can just fetch an image endpoint if we had one)
-                            // But neonize gives string. We need to render it. The backend currently uses qrcode lib to save to file.
-                            // Let's assume backend serves the image at /api/whatsapp/qr?image=true or something, but our updated backend just returns JSON for now.
-                            // Actually, qrData.qr_code is the raw string. We can use a JS library to render it, or we just need the backend to render it.
-                            qrContainer.innerHTML = `<img src="https://api.qrserver.com/v1/create-qr-code/?size=250x250&data=${encodeURIComponent(qrData.qr_code)}" alt="QR Code" class="w-64 h-64 mx-auto"/>`;
-                        }
-                    }
-                } else {
-                    qrModal.classList.add('hidden');
-                }
-            } catch (e) {
-                console.error("Failed to check WA status:", e);
-            }
-        }
-        
-        setInterval(checkWhatsAppStatus, 5000);
-        checkWhatsAppStatus();
-
     </script>
 </body>
 

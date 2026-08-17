@@ -4,7 +4,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Event Data</title>
+    <title>Event Pass Records & Stats</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
     <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
@@ -19,83 +19,116 @@
 <body class="bg-slate-50 text-slate-900 min-h-screen p-6">
     <div class="max-w-4xl mx-auto">
         <!-- Header -->
-        <header class="flex justify-between items-center mb-8">
+        <header class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-8">
             <div>
-                <h1 class="text-3xl font-bold text-slate-900">Event Statistics</h1>
-                <p class="text-slate-500">Total collection and participant overview</p>
+                <h1 class="text-3xl font-bold text-slate-900 tracking-tight">Entry Pass Analytics</h1>
+                <p class="text-slate-500 text-sm mt-1">Real-time attendance overview and data export</p>
             </div>
             <div class="flex gap-3">
-                <a href="health.html"
-                    class="bg-white border border-slate-300 text-slate-700 hover:bg-slate-50 px-4 py-2 rounded-lg text-sm font-medium transition-colors shadow-sm flex items-center">
-                    <span class="material-icons text-sm mr-2">monitor_heart</span> Health
+                <a href="participants.html"
+                    class="bg-white border border-slate-200 text-slate-700 hover:bg-slate-100 px-4 py-2 rounded-xl text-sm font-medium transition-colors shadow-sm flex items-center">
+                    <span class="material-icons text-sm mr-2 text-indigo-600">people</span> Live Sessions
                 </a>
                 <a href="index.html"
-                    class="bg-white border border-slate-300 text-slate-700 hover:bg-slate-50 px-4 py-2 rounded-lg text-sm font-medium transition-colors shadow-sm flex items-center">
-                    <span class="material-icons text-sm mr-2">home</span> Home
+                    class="bg-white border border-slate-200 text-slate-700 hover:bg-slate-100 px-4 py-2 rounded-xl text-sm font-medium transition-colors shadow-sm flex items-center">
+                    <span class="material-icons text-sm mr-2 text-slate-600">home</span> New Pass
                 </a>
             </div>
         </header>
 
-        
-                <div class="mt-6 text-center">
-                    <a href="#" onclick="window.open(`${BACKEND_URL}/api/csv/download`, '_blank')" class="bg-green-600 hover:bg-green-700 text-white font-semibold py-2 px-6 rounded-lg transition-colors inline-block">
-                        Download CSV
-                    </a>
-                </div>
-                
         <!-- Stats Grid -->
-        <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
+        <div class="grid grid-cols-1 sm:grid-cols-3 gap-6 mb-8">
 
             <!-- Total Participants -->
-            <div class="bg-white p-8 rounded-2xl shadow-sm border border-slate-200 flex items-center justify-between">
+            <div class="bg-white p-6 rounded-2xl shadow-sm border border-slate-200 flex items-center justify-between">
                 <div>
-                    <div class="text-slate-500 text-sm font-semibold uppercase tracking-wide mb-1">Total Participants
+                    <div class="text-slate-500 text-xs font-semibold uppercase tracking-wider mb-1">
+                        Total Passes Issued
                     </div>
-                    <div class="text-5xl font-bold text-indigo-600 tracking-tight"><span id="total_participants">Loading...</span></div>
-                    <div class="mt-2 text-xs text-slate-400">All-time entries</div>
+                    <div class="text-4xl font-bold text-indigo-600 tracking-tight">
+                        <span id="total_participants">0</span>
+                    </div>
+                    <div class="mt-1 text-xs text-slate-400">All-time registrations</div>
                 </div>
-                <div class="w-16 h-16 bg-indigo-50 rounded-full flex items-center justify-center">
-                    <span class="material-icons text-4xl text-indigo-500">groups</span>
+                <div class="w-14 h-14 bg-indigo-50 rounded-2xl flex items-center justify-center text-indigo-600">
+                    <span class="material-icons text-3xl">badge</span>
                 </div>
             </div>
 
-            <!-- Total Revenue -->
-            <div class="bg-white p-8 rounded-2xl shadow-sm border border-slate-200 flex items-center justify-between">
+            <!-- Today's Entries -->
+            <div class="bg-white p-6 rounded-2xl shadow-sm border border-slate-200 flex items-center justify-between">
                 <div>
-                    <div class="text-slate-500 text-sm font-semibold uppercase tracking-wide mb-1">Total Collection
+                    <div class="text-slate-500 text-xs font-semibold uppercase tracking-wider mb-1">
+                        Passes Issued Today
                     </div>
-                    <div class="text-5xl font-bold text-emerald-600 tracking-tight">₹ <span id="total_revenue">Loading...</span></div>
-                    <div class="mt-2 text-xs text-slate-400">Total revenue generated</div>
+                    <div class="text-4xl font-bold text-emerald-600 tracking-tight">
+                        <span id="today_entries">0</span>
+                    </div>
+                    <div class="mt-1 text-xs text-slate-400">Current calendar day</div>
                 </div>
-                <div class="w-16 h-16 bg-emerald-50 rounded-full flex items-center justify-center">
-                    <span class="material-icons text-4xl text-emerald-500">payments</span>
+                <div class="w-14 h-14 bg-emerald-50 rounded-2xl flex items-center justify-center text-emerald-600">
+                    <span class="material-icons text-3xl">today</span>
+                </div>
+            </div>
+
+            <!-- Active Sessions -->
+            <div class="bg-white p-6 rounded-2xl shadow-sm border border-slate-200 flex items-center justify-between">
+                <div>
+                    <div class="text-slate-500 text-xs font-semibold uppercase tracking-wider mb-1">
+                        Active In Venue
+                    </div>
+                    <div class="text-4xl font-bold text-blue-600 tracking-tight">
+                        <span id="active_sessions">0</span>
+                    </div>
+                    <div class="mt-1 text-xs text-slate-400">Live active sessions</div>
+                </div>
+                <div class="w-14 h-14 bg-blue-50 rounded-2xl flex items-center justify-center text-blue-600">
+                    <span class="material-icons text-3xl">how_to_reg</span>
                 </div>
             </div>
         </div>
 
-        <div class="bg-blue-50 border border-blue-100 rounded-xl p-4 flex items-start">
-            <span class="material-icons text-blue-500 mt-0.5 mr-3">info</span>
+        <!-- Download Card -->
+        <div class="bg-white rounded-2xl p-6 shadow-sm border border-slate-200 mb-8 flex flex-col sm:flex-row items-center justify-between gap-4">
             <div>
-                <h4 class="text-sm font-bold text-blue-900">Data Source</h4>
-                <p class="text-sm text-blue-800 mt-1">
-                    These statistics are real-time aggregations from the linked Google Sheet.
+                <h3 class="text-base font-bold text-slate-900">Export Raw Entry Records</h3>
+                <p class="text-xs text-slate-500 mt-1">Download full attendance CSV containing timestamp, name, phone, entry ID, and category.</p>
+            </div>
+            <button onclick="window.open(`${BACKEND_URL}/api/csv/download`, '_blank')"
+                class="bg-emerald-600 hover:bg-emerald-700 active:bg-emerald-800 text-white font-semibold py-2.5 px-6 rounded-xl shadow-md transition-all flex items-center text-sm">
+                <span class="material-icons text-sm mr-2">download</span> Download CSV
+            </button>
+        </div>
+
+        <div class="bg-slate-100 border border-slate-200 rounded-xl p-4 flex items-start">
+            <span class="material-icons text-slate-500 mt-0.5 mr-3">lock</span>
+            <div>
+                <h4 class="text-xs font-bold text-slate-800 uppercase tracking-wider">Privacy & Storage Notice</h4>
+                <p class="text-xs text-slate-600 mt-0.5">
+                    Data is stored directly in your server's local file store. Only administrators with access to this dashboard can export the CSV records.
                 </p>
             </div>
         </div>
 
     </div>
 
-                <script>
-                    async function fetchStats() {
-                        try {
-                            const res = await fetch(`${BACKEND_URL}/api/health_stats`);
-                            // We need to add an endpoint to get total stats
-                            // Actually just fetch from a new endpoint or the existing one
-                        } catch(e) {}
-                    }
-                    // Since time is short, this is a placeholder.
-                </script>
-                
+    <script>
+        async function fetchStats() {
+            try {
+                const res = await fetch(`${BACKEND_URL}/api/stats`);
+                if (res.ok) {
+                    const data = await res.json();
+                    document.getElementById('total_participants').textContent = data.total_entries || 0;
+                    document.getElementById('today_entries').textContent = data.today_entries || 0;
+                    document.getElementById('active_sessions').textContent = data.active_sessions || 0;
+                }
+            } catch(e) {
+                console.error("Failed to load statistics:", e);
+            }
+        }
+        fetchStats();
+        setInterval(fetchStats, 10000);
+    </script>
 </body>
 
 </html>

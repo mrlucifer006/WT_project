@@ -96,15 +96,15 @@ Your frontend will be accessible at: `https://<username>.github.io/<repository-n
 - Open WhatsApp on your phone -> **Linked Devices** -> **Link a Device** -> Scan the QR code on the webpage.
 - Once connected, the modal automatically closes.
 
-### 2. Processing Tickets
-- Fill in Participant Name, Phone Number, Payment Mode (Cash/Online), and Ticket Plan.
-- Click **Process Entry**.
-- The participant receives their unique encrypted QR code on WhatsApp.
+### 2. Issuing Entry Passes
+- Fill in Participant Name, WhatsApp Phone Number, Pass Category (General Entry, VIP, Guest, Staff, etc.), and Duration.
+- Click **Generate Entry Pass**.
+- The participant immediately receives their unique encrypted QR pass on WhatsApp with entry confirmation.
 
 ### 3. Verifying QR & Starting Timers
-- Admin scans the participant's QR code.
+- Admin scans the participant's QR pass.
 - Admin starts the session timer. WhatsApp alerts are automatically sent when the session starts, at the 5-minute warning, and at session completion.
 
-### 4. Admin Dashboard & CSV Download
-- Visit `data.html` or `health.html` on your frontend.
-- Click **Download CSV** to export `transactions.csv` directly from the backend.
+### 4. Attendance Dashboard & CSV Download
+- Visit `data.html` or `participants.html` on your frontend.
+- View real-time attendee counts and click **Download CSV** to export the full attendance records directly from the backend.
