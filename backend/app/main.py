@@ -156,7 +156,14 @@ async def startup_event():
 
 @app.get("/api/whatsapp/status")
 async def get_wa_status():
-    return {"connected": whatsapp_service.is_connected, "qr_ready": whatsapp_service.qr_code is not None}
+    logged_in = whatsapp_service.is_logged_in
+    connected = whatsapp_service.is_connected
+    return {
+        "connected": logged_in or connected,
+        "logged_in": logged_in,
+        "socket_connected": connected,
+        "qr_ready": (whatsapp_service.qr_code is not None) and not logged_in
+    }
 
 @app.get("/api/whatsapp/qr")
 async def get_wa_qr():
