@@ -1,5 +1,4 @@
 from fastapi import FastAPI, BackgroundTasks, Request, Form, HTTPException
-from fastapi.templating import Jinja2Templates
 from fastapi.staticfiles import StaticFiles
 from fastapi.responses import HTMLResponse, JSONResponse, RedirectResponse
 import os
@@ -123,13 +122,8 @@ async def startup_event():
     # Start WhatsApp service
     whatsapp_service.start()
     
-    # Initialize Google Sheets Service
-    print("Initializing Google Sheets Service...")
-    try:
-        csv_service.connect()
-        print("Google Sheets Service initialized successfully.")
-    except Exception as e:
-        print(f"Error initializing Google Sheets Service: {e}")
+    # Initialize CSV Service
+    print("CSV Attendance Service active.")
 
     load_sessions()
     
@@ -182,28 +176,111 @@ async def wa_logout():
     whatsapp_service.logout()
     return {"status": "logged out"}
 
-@app.get("/", response_class=HTMLResponse)
-async def read_root(request: Request):
-    return templates.TemplateResponse(request, "index.html", {"request": request})
+def render_scan_html(status: str, name: str = "", phone: str = "", transaction_id: str = "", duration: int = 15, plan: str = "General Entry", message: str = "") -> str:
+    if status == "success":
+        content = f"""
+        <div class="w-16 h-16 bg-emerald-100 text-emerald-600 rounded-full flex items-center justify-center mx-auto mb-4">
+            <span class="material-icons text-3xl">check_circle</span>
+        </div>
+        <h1 class="text-2xl font-bold text-slate-900 mb-1">Verified Successfully</h1>
+        <p class="text-slate-500 text-xs mb-6">Entry pass is valid and registered.</p>
+        <div class="bg-slate-50 rounded-xl p-4 text-left border border-slate-200 space-y-2.5 text-xs">
+            <div class="flex justify-between"><span class="font-medium text-slate-500">Attendee</span><span class="font-bold text-slate-900">{name}</span></div>
+            <div class="flex justify-between"><span class="font-medium text-slate-500">Phone</span><span class="font-mono text-slate-700">{phone}</span></div>
+            <div class="flex justify-between"><span class="font-medium text-slate-500">Pass Type</span><span class="font-bold text-slate-900">{plan}</span></div>
+            <div class="flex justify-between"><span class="font-medium text-slate-500">Duration</span><span class="font-bold text-indigo-600">{duration} Mins</span></div>
+            <div class="pt-2 border-t border-slate-200 flex justify-between"><span class="font-medium text-slate-500">Entry ID</span><span class="font-mono text-slate-600">{transaction_id}</span></div>
+        </div>
+        <form id="startTimerForm" class="mt-6">
+            <input type="hidden" name="name" value="{name}">
+            <input type="hidden" name="phone" value="{phone}">
+            <input type="hidden" name="transaction_id" value="{transaction_id}">
+            <input type="hidden" name="duration" value="{duration}">
+            <button type="submit" id="startTimerBtn" class="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-semibold py-3 rounded-xl shadow-md transition-all flex items-center justify-center text-sm">
+                <span class="material-icons text-sm mr-2">timer</span> Start {duration} Min Session
+            </button>
+        </form>
+        <div id="timerMessage" class="hidden mt-3 text-xs font-medium"></div>
+        <script>
+            document.getElementById('startTimerForm').addEventListener('submit', async (e) => {{
+                e.preventDefault();
+                const btn = document.getElementById('startTimerBtn');
+                const msg = document.getElementById('timerMessage');
+                const formData = new FormData(e.target);
+                btn.disabled = true;
+                btn.innerHTML = '<span class="material-icons text-sm mr-2 animate-spin">refresh</span> Starting...';
+                try {{
+                    const res = await fetch('/start_timer', {{ method: 'POST', body: formData }});
+                    const data = await res.json();
+                    if (res.ok) {{
+                        msg.className = 'mt-3 p-3 bg-emerald-50 text-emerald-700 rounded-xl text-xs font-medium border border-emerald-100 flex items-center justify-center';
+                        msg.innerHTML = '<span class="material-icons text-sm mr-1.5">alarm_on</span> Session started! Notifications active.';
+                        msg.classList.remove('hidden');
+                        btn.classList.add('hidden');
+                    }} else {{
+                        msg.className = 'mt-3 p-3 bg-red-50 text-red-700 rounded-xl text-xs font-medium border border-red-100';
+                        msg.textContent = data.message || 'Failed to start session';
+                        msg.classList.remove('hidden');
+                        btn.disabled = false;
+                    }}
+                }} catch(err) {{
+                    msg.className = 'mt-3 p-3 bg-red-50 text-red-700 rounded-xl text-xs font-medium border border-red-100';
+                    msg.textContent = 'Network error: ' + err.message;
+                    msg.classList.remove('hidden');
+                    btn.disabled = false;
+                }}
+            }});
+        </script>
+        """
+    elif status == "check_restore":
+        content = f"""
+        <div class="w-16 h-16 bg-blue-100 text-blue-600 rounded-full flex items-center justify-center mx-auto mb-4">
+            <span class="material-icons text-3xl">restore</span>
+        </div>
+        <h1 class="text-2xl font-bold text-slate-900 mb-1">Session In Progress</h1>
+        <p class="text-slate-500 text-xs mb-6">Attendee: <strong>{name}</strong> ({plan} - {duration}m)</p>
+        <p class="text-xs text-slate-600 mb-6">This entry is currently active in the venue.</p>
+        <a href="/" class="inline-block bg-slate-900 hover:bg-slate-800 text-white font-semibold py-2.5 px-6 rounded-xl text-xs transition-colors">
+            Back to Dashboard
+        </a>
+        """
+    else:
+        content = f"""
+        <div class="w-16 h-16 bg-red-100 text-red-600 rounded-full flex items-center justify-center mx-auto mb-4">
+            <span class="material-icons text-3xl">cancel</span>
+        </div>
+        <h1 class="text-2xl font-bold text-slate-900 mb-1">Verification Failed</h1>
+        <p class="text-slate-500 text-xs mb-6">{message or "Invalid or expired QR code"}</p>
+        <a href="/" class="inline-block bg-slate-900 hover:bg-slate-800 text-white font-semibold py-2.5 px-6 rounded-xl text-xs transition-colors">
+            Back to Dashboard
+        </a>
+        """
 
-@app.post("/submit_entry")
-async def submit_entry(
-    background_tasks: BackgroundTasks, 
-    name: str = Form(...),
-    phone: str = Form(...),
-    entry_type: str = Form("General Entry"),
-    duration: int = Form(15)
-):
-    """
-    Endpoint to trigger individual entry pass processing.
-    """
-    import random
-    timestamp_part = datetime.now().strftime("%Y%m%d-%H%M%S")
-    random_part = str(random.randint(100, 999))
-    transaction_id = f"ENTRY-{timestamp_part}-{random_part}"
+    return f"""<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Pass Verification</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
+    <style>body {{ font-family: 'Inter', sans-serif; }}</style>
+</head>
+<body class="bg-slate-50 text-slate-900 min-h-screen flex items-center justify-center p-4">
+    <div class="max-w-md w-full bg-white rounded-2xl shadow-xl overflow-hidden border border-slate-200 p-8 text-center">
+        {content}
+    </div>
+</body>
+</html>"""
 
-    background_tasks.add_task(process_entry_task, name, phone, transaction_id, entry_type, duration)
-    return {"status": "Processing started", "message": "Entry pass generation initiated", "entry_id": transaction_id}
+@app.get("/")
+async def read_root():
+    return {
+        "status": "online",
+        "service": "Event Pass Verification API",
+        "version": "1.0.0"
+    }
 
 @app.get("/verify", response_class=HTMLResponse)
 async def verify_entry(request: Request, token: str):
@@ -221,48 +298,23 @@ async def verify_entry(request: Request, token: str):
             plan = data.get("plan", "General Entry")
             secure_key = data.get("secure_key")
         except Exception:
-            return templates.TemplateResponse(request, "scan_result.html", {
-                "request": request,
-                "status": "error",
-                "message": "Invalid or Tampered QR Code"
-            })
+            return HTMLResponse(content=render_scan_html("error", message="Invalid or Tampered QR Code"), status_code=400)
 
         # Validate Security Key
-        # 1. Check if ACTIVE SESSION exists (Reload support)
+        # 1. Check if ACTIVE SESSION exists
         if transaction_id in active_sessions:
-             return templates.TemplateResponse(request, "scan_result.html", {
-                "request": request,
-                "status": "check_restore",
-                "transaction_id": transaction_id,
-                "name": name,
-                "phone": phone, 
-                "duration": duration,
-                "plan": plan
-            })
+            return HTMLResponse(content=render_scan_html("check_restore", name=name, phone=phone, transaction_id=transaction_id, duration=duration, plan=plan))
 
         # 2. Validate Security Key (Pending Session)
         if transaction_id not in pending_keys:
-             # Check if already processed (not in pending lists)
-             current_status = csv_service.get_entry_status(transaction_id)
-             if current_status and current_status.strip().lower() == "in":
-                 return templates.TemplateResponse(request, "scan_result.html", {
-                    "request": request,
-                    "status": "error",
-                    "message": "Entry ALREADY processed/used."
-                 })
-             else:
-                 return templates.TemplateResponse(request, "scan_result.html", {
-                    "request": request,
-                    "status": "error",
-                    "message": "Invalid QR Code: Entry not found or expired."
-                 })
+            current_status = csv_service.get_entry_status(transaction_id)
+            if current_status and current_status.strip().lower() == "in":
+                return HTMLResponse(content=render_scan_html("error", message="Entry ALREADY processed/used."), status_code=400)
+            else:
+                return HTMLResponse(content=render_scan_html("error", message="Invalid QR Code: Entry not found or expired."), status_code=404)
         
         if pending_keys[transaction_id] != secure_key:
-             return templates.TemplateResponse(request, "scan_result.html", {
-                "request": request,
-                "status": "error",
-                "message": "Security Check Failed: Invalid Key."
-            })
+            return HTMLResponse(content=render_scan_html("error", message="Security Check Failed: Invalid Key."), status_code=403)
 
         # Update CSV status
         csv_service.update_entry_status(transaction_id, "In")
@@ -271,24 +323,11 @@ async def verify_entry(request: Request, token: str):
         msg = f"Welcome {name}! Your entry is confirmed. Please proceed to the check-in desk for your {duration} mins session."
         whatsapp_service.send_message(phone, msg)
         
-        return templates.TemplateResponse(request, "scan_result.html", {
-            "request": request,
-            "status": "success",
-            "name": name,
-            "transaction_id": transaction_id,
-            "duration": duration,
-            "plan": plan,
-            "phone": phone,
-            "time": datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-        })
+        return HTMLResponse(content=render_scan_html("success", name=name, phone=phone, transaction_id=transaction_id, duration=duration, plan=plan))
         
     except Exception as e:
         print(f"Verification Failed: {e}")
-        return templates.TemplateResponse(request, "scan_result.html", {
-            "request": request,
-            "status": "error",
-            "message": "Verification Processing Failed"
-        })
+        return HTMLResponse(content=render_scan_html("error", message="Verification Processing Failed"), status_code=500)
 
 # Global state for pending keys (Security)
 PENDING_KEYS_FILE = "pending_keys.json"
@@ -537,61 +576,28 @@ async def verify_restore(request: Request):
         print(f"Restore verification failed: {e}")
         return JSONResponse(status_code=500, content={"status": "error", "message": "Server Error"})
 
-@app.get("/participants", response_class=HTMLResponse)
-async def view_participants(request: Request):
-    return templates.TemplateResponse(request, "participants.html", {"request": request})
+@app.get("/participants")
+async def view_participants():
+    return {"message": "Use frontend/participants.html or /api/sessions"}
 
-@app.get("/health", response_class=HTMLResponse)
-async def view_health(request: Request):
-    auth_cookie = request.cookies.get("health_auth")
-    authenticated = auth_cookie == "true"
-    return templates.TemplateResponse(request, "health.html", {"request": request, "authenticated": authenticated})
+@app.get("/health")
+async def view_health():
+    return {
+        "status": "healthy",
+        "active_sessions": len(active_sessions),
+        "whatsapp_connected": whatsapp_service.is_connected
+    }
 
-@app.post("/health/login", response_class=HTMLResponse)
-async def health_login(request: Request, username: str = Form(...), password: str = Form(...)):
+@app.post("/health/login")
+async def health_login(username: str = Form(...), password: str = Form(...)):
     if username == settings.ADMIN_USERNAME and password == settings.ADMIN_PASSWORD:
-        # Check where checking came from
-        referer = request.headers.get("referer")
-        redirect_url = "/health" # default
-        
-        # Simple hack: if we want to redirect back to /data if possible, but form doesn't carry it easily without hidden field.
-        # For now, always Health. But let's support /data access.
-        
-        response = templates.TemplateResponse(request, "health.html", {"request": request, "authenticated": True})
-        response.set_cookie(key="health_auth", value="true", httponly=True)
-        return response
+        return {"status": "authenticated"}
     else:
-        return templates.TemplateResponse(request, "health.html", {
-            "request": request, 
-            "authenticated": False, 
-            "error": "Invalid Credentials"
-        })
+        return JSONResponse(status_code=401, content={"status": "error", "message": "Invalid Credentials"})
 
-@app.get("/data", response_class=HTMLResponse)
-async def view_data(request: Request):
-    # Reuse Health Auth
-    auth_cookie = request.cookies.get("health_auth")
-    if auth_cookie != "true":
-         # Redirect to login (Health page for now as it has the form)
-         return RedirectResponse(url="/health", status_code=302)
-    
-    # Fetch Data
-    stats = csv_service.get_total_stats("")
-    
-    return templates.TemplateResponse(request, "data.html", {
-        "request": request, 
-        "total_participants": stats["count"],
-        "total_revenue": stats["total"]
-    })
-
-@app.get("/health/logout", response_class=HTMLResponse)
-def health_logout(request: Request):
-    response = RedirectResponse(url="/health", status_code=302)
-    response.delete_cookie("health_auth")
-    # RedirectResponse requires import, let's use TemplateResponse to be lazy or import it.
-    # Actually, returning a template with cleared cookie is fine, or simple redirect.
-    # Let's verify imports first. RedirectResponse is in fastapi.responses
-    return response
+@app.get("/data")
+async def view_data():
+    return {"message": "Use frontend/data.html or /api/csv/download"}
 
 @app.get("/api/health_stats")
 async def get_health_stats():
