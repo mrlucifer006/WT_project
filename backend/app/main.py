@@ -296,6 +296,25 @@ async def read_root():
         "version": "1.0.0"
     }
 
+@app.post("/submit_entry")
+async def submit_entry(
+    background_tasks: BackgroundTasks, 
+    name: str = Form(...),
+    phone: str = Form(...),
+    entry_type: str = Form("General Entry"),
+    duration: int = Form(15)
+):
+    """
+    Endpoint to trigger individual entry pass processing.
+    """
+    import random
+    timestamp_part = datetime.now().strftime("%Y%m%d-%H%M%S")
+    random_part = str(random.randint(100, 999))
+    transaction_id = f"ENTRY-{timestamp_part}-{random_part}"
+
+    background_tasks.add_task(process_entry_task, name, phone, transaction_id, entry_type, duration)
+    return {"status": "Processing started", "message": "Entry pass generation initiated", "entry_id": transaction_id}
+
 @app.get("/verify", response_class=HTMLResponse)
 async def verify_entry(request: Request, token: str):
     """
@@ -398,9 +417,8 @@ def process_entry_task(name: str, phone: str, transaction_id: str, entry_type: s
         token = crypto_service.encrypt(data)
         
         # Build URL
-        local_ip = get_local_ip()
-        port = 5000
-        qr_data = f"http://{local_ip}:{port}/verify?token={token}"
+        base_url = os.environ.get("RENDER_EXTERNAL_URL", f"http://{get_local_ip()}:5000")
+        qr_data = f"{base_url}/verify?token={token}"
         log_debug(f"QR Content: {qr_data}")
         
     except Exception as e:
