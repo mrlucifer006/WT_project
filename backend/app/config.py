@@ -7,8 +7,8 @@ class Settings(BaseSettings):
     MAX_RETRIES: int = 3
     RETRY_DELAY_SECONDS: int = 5
     WARNING_BUFFER_MINUTES: int = 5
-    ADMIN_USERNAME: str
-    ADMIN_PASSWORD: str
+    ADMIN_USERNAME: str = "admin"
+    ADMIN_PASSWORD: str = "adminpassword"
     
     class Config:
         case_sensitive = True

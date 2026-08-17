@@ -4,7 +4,7 @@ import time
 import logging
 from datetime import datetime
 from neonize.client import NewClient
-from neonize.events import ConnectedEv, PairStatusEv, QrEv, Event, LoggedOutEv, MessageEv
+from neonize.events import ConnectedEv, PairStatusEv, QREv, Event, LoggedOutEv, MessageEv
 from neonize.utils import log
 from neonize.utils.jid import build_jid
 
@@ -43,11 +43,14 @@ class WhatsAppService:
             from app.config import log_debug
             log_debug(f"Pair Status: {event}")
             
-        @self.client.event(QrEv)
-        def on_qr(client, event: QrEv):
+        @self.client.event(QREv)
+        def on_qr(client, event: QREv):
             from app.config import log_debug
-            log_debug("QR Code received")
-            self.qr_code = event.QR
+            log_debug(f"QR Code received")
+            if hasattr(event, "Codes") and len(event.Codes) > 0:
+                self.qr_code = event.Codes[0]
+            elif hasattr(event, "QR"):
+                self.qr_code = event.QR
             
         @self.client.event(LoggedOutEv)
         def on_logged_out(client, event: LoggedOutEv):

@@ -27,8 +27,11 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# Mount static files
-app.mount("/static", StaticFiles(directory="static"), name="static")
+# Mount static files safely
+if os.path.exists("static"):
+    app.mount("/static", StaticFiles(directory="static"), name="static")
+
+os.makedirs("generated_qrs", exist_ok=True)
 app.mount("/generated_qrs", StaticFiles(directory="generated_qrs"), name="generated_qrs")
 
 

@@ -69,7 +69,22 @@ Billing/
 
 ---
 
-## 4. Local Development Setup
+## 4. Environment Variables Reference (Render / `.env`)
+
+| Variable | Required? | Default | Description | Example |
+| :--- | :---: | :--- | :--- | :--- |
+| `ADMIN_PHONE` | **Recommended** | `""` | Phone number for receiving admin alerts, error notices, and hourly reports | `919342672711` |
+| `ADMIN_USERNAME` | **Optional** | `"admin"` | Username to log into admin dashboard (`/health.html`, `/data.html`) | `admin` |
+| `ADMIN_PASSWORD` | **Optional** | `"adminpassword"` | Password to log into admin dashboard | `SecretPass123` |
+| `WHATSAPP_SESSION_NAME` | **Optional** | `"my_session"` | File prefix for SQLite session storage | `my_session` |
+| `WARNING_BUFFER_MINUTES` | **Optional** | `5` | Minutes remaining in user session when warning message is sent | `5` |
+| `MAX_RETRIES` | **Optional** | `3` | Maximum retry attempts for failed operations | `3` |
+| `RETRY_DELAY_SECONDS` | **Optional** | `5` | Delay in seconds between retries | `5` |
+| `SHEET_URL` | *Deprecated* | `""` | Left for legacy compatibility (system now uses local CSV) | - |
+
+---
+
+## 5. Local Development Setup
 
 ```bash
 # 1. Start the Backend
