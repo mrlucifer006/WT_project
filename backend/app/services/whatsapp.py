@@ -103,6 +103,7 @@ class WhatsAppService:
 
     def delete_session(self) -> bool:
         """Explicitly disconnect, delete session DB (session.db, my_session.sqlite3), and re-initialize."""
+        self._running = False
         try:
             if self.client:
                 self.client.disconnect()
@@ -124,16 +125,18 @@ class WhatsAppService:
                         except Exception as e:
                             logger.error(f"Failed to delete {fpath}: {e}")
         
+        time.sleep(0.5)
         self._init_client()
+        self.start(force_restart=True)
         return True
 
     def logout(self):
         """Force logout and delete session database."""
         return self.delete_session()
 
-    def start(self):
+    def start(self, force_restart: bool = False):
         """Starts the neonize connection loop in a single background thread."""
-        if self.thread is not None and self.thread.is_alive():
+        if not force_restart and self.thread is not None and self.thread.is_alive():
             return
             
         self._running = True
