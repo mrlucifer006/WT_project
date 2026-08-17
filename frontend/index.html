@@ -164,11 +164,7 @@
                 if (!data.connected) {
                     qrModal.classList.remove('hidden');
                     if (data.qr_ready) {
-                        const qrRes = await fetch(`${BACKEND_URL}/api/whatsapp/qr`);
-                        const qrData = await qrRes.json();
-                        if (qrData.qr_code) {
-                            qrContainer.innerHTML = `<img src="https://api.qrserver.com/v1/create-qr-code/?size=220x220&data=${encodeURIComponent(qrData.qr_code)}" alt="WhatsApp QR Code" class="w-52 h-52 mx-auto rounded-lg shadow-sm border border-slate-100"/>`;
-                        }
+                        qrContainer.innerHTML = `<img src="${BACKEND_URL}/api/whatsapp/qr_image?t=${Date.now()}" alt="WhatsApp QR Code" class="w-52 h-52 mx-auto rounded-lg shadow-sm border border-slate-100"/>`;
                     }
                 } else {
                     qrModal.classList.add('hidden');

@@ -43,14 +43,19 @@ class WhatsAppService:
             from app.config import log_debug
             log_debug(f"Pair Status: {event}")
             
-        @self.client.event(QREv)
-        def on_qr(client, event: QREv):
+        @self.client.event.qr
+        def on_qr(client, data_qr: bytes):
             from app.config import log_debug
-            log_debug(f"QR Code received")
-            if hasattr(event, "Codes") and len(event.Codes) > 0:
-                self.qr_code = event.Codes[0]
-            elif hasattr(event, "QR"):
-                self.qr_code = event.QR
+            import segno
+            log_debug(f"QR Code received via event.qr: {len(data_qr)} bytes")
+            try:
+                segno.make_qr(data_qr).terminal(compact=True)
+            except Exception:
+                pass
+            if isinstance(data_qr, bytes):
+                self.qr_code = data_qr.decode("utf-8", errors="ignore")
+            else:
+                self.qr_code = str(data_qr)
             
         @self.client.event(LoggedOutEv)
         def on_logged_out(client, event: LoggedOutEv):

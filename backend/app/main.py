@@ -164,6 +164,20 @@ async def get_wa_qr():
         return {"qr_code": whatsapp_service.qr_code}
     return JSONResponse(status_code=404, content={"message": "QR not ready"})
 
+@app.get("/api/whatsapp/qr_image")
+async def get_wa_qr_image():
+    if whatsapp_service.qr_code:
+        import io
+        import qrcode
+        from fastapi.responses import Response
+        
+        img = qrcode.make(whatsapp_service.qr_code)
+        buf = io.BytesIO()
+        img.save(buf, format="PNG")
+        buf.seek(0)
+        return Response(content=buf.getvalue(), media_type="image/png")
+    return JSONResponse(status_code=404, content={"message": "QR not ready"})
+
 @app.get("/api/csv/download")
 async def download_csv():
     file_path = "transactions.csv"

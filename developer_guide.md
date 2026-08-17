@@ -59,6 +59,7 @@ Billing/
 | :--- | :--- | :--- |
 | `/api/whatsapp/status` | `GET` | Returns `{ "connected": bool, "qr_ready": bool }` |
 | `/api/whatsapp/qr` | `GET` | Returns `{ "qr_code": str }` for pairing |
+| `/api/whatsapp/qr_image` | `GET` | Direct PNG image stream of WhatsApp pairing QR |
 | `/api/whatsapp/logout` | `POST` | Disconnects and deletes session DB |
 | `/api/csv/download` | `GET` | Streams `transactions.csv` to admin |
 | `/submit_entry` | `POST` | Generates QR pass, logs to CSV, and sends WhatsApp message |
