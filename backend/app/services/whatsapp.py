@@ -2,11 +2,11 @@ import os
 import threading
 import time
 import logging
+from datetime import datetime
 from neonize.client import NewClient
-from neonize.events import ConnectedEv, PairStatusEv, Event
+from neonize.events import ConnectedEv, PairStatusEv, QrEv, Event, LoggedOutEv, MessageEv
 from neonize.utils import log
 from neonize.utils.jid import build_jid
-from neonize.proto.Neonize_pb2 import Message
 
 # Setup logging
 logging.basicConfig(level=logging.INFO)
@@ -19,9 +19,15 @@ class WhatsAppService:
         if session_name is None:
             session_name = settings.WHATSAPP_SESSION_NAME
         self.session_name = session_name
-        self.client = NewClient(session_name + ".sqlite3")
+        self.db_path = session_name + ".sqlite3"
         self.is_connected = False
-        self.qr_callback = None
+        self.qr_code = None
+        self.last_active = datetime.now()
+        
+        self._init_client()
+
+    def _init_client(self):
+        self.client = NewClient(self.db_path)
         
         # Setup event listeners
         @self.client.event(ConnectedEv)
@@ -29,11 +35,55 @@ class WhatsAppService:
             from app.config import log_debug
             log_debug("WhatsApp Connected")
             self.is_connected = True
+            self.qr_code = None
+            self.last_active = datetime.now()
 
         @self.client.event(PairStatusEv)
         def on_pair_status(client, event: PairStatusEv):
             from app.config import log_debug
             log_debug(f"Pair Status: {event}")
+            
+        @self.client.event(QrEv)
+        def on_qr(client, event: QrEv):
+            from app.config import log_debug
+            log_debug("QR Code received")
+            self.qr_code = event.QR
+            
+        @self.client.event(LoggedOutEv)
+        def on_logged_out(client, event: LoggedOutEv):
+            from app.config import log_debug
+            log_debug("Logged out from WhatsApp")
+            self.is_connected = False
+            self.logout()
+            
+        @self.client.event(MessageEv)
+        def on_message(client, event: MessageEv):
+            self.last_active = datetime.now()
+
+    def check_inactivity(self):
+        """Check if inactive for 2 days. If so, logout."""
+        delta = datetime.now() - self.last_active
+        if delta.total_seconds() > 2 * 24 * 3600:
+            logging.info("Inactive for > 2 days. Deleting session.")
+            self.logout()
+
+    def logout(self):
+        """Force logout and delete session DB."""
+        try:
+            self.client.disconnect()
+        except Exception:
+            pass
+        self.is_connected = False
+        self.qr_code = None
+        if os.path.exists(self.db_path):
+            try:
+                os.remove(self.db_path)
+                logging.info(f"Deleted {self.db_path}")
+            except Exception as e:
+                logging.error(f"Failed to delete DB: {e}")
+        # Re-initialize client to get new QR
+        self._init_client()
+        self.start()
 
     def start(self):
         """Starts the neonize client in a separate thread."""
@@ -43,34 +93,35 @@ class WhatsAppService:
             
             while True:
                 try:
-                    # self.client.connect() DOES BLOCK, so we should just call it.
-                    # If it returns or errors, we restart.
+                    self.check_inactivity()
                     self.client.connect()
                 except Exception as e:
                     log_debug(f"WhatsApp client disconnected/error: {e}. Reconnecting in 5s...")
                     self.is_connected = False
                     time.sleep(5)
 
+        if hasattr(self, 'thread') and self.thread.is_alive():
+            return
+            
         self.thread = threading.Thread(target=run_client, daemon=True)
         self.thread.start()
         
     def ensure_connection(self):
         """Waits for connection with timeout."""
         if self.is_connected:
+            self.last_active = datetime.now()
             return True
             
         from app.config import log_debug
         log_debug("Waiting for WhatsApp connection...")
         
-        # Wait up to 15 seconds
         for _ in range(30):
             if self.is_connected:
                 log_debug("WhatsApp connected successfully.")
+                self.last_active = datetime.now()
                 return True
             time.sleep(0.5)
             
-        # Try to reconnect manually if stuck
-        log_debug("Connection timed out. Checking thread status...")
         if not self.thread.is_alive():
             log_debug("Thread died, restarting...")
             self.start()
@@ -78,52 +129,38 @@ class WhatsAppService:
         return False
 
     def send_image(self, phone_number: str, image_path: str, caption: str = ""):
-        """
-        Sends an image to the specified phone number.
-        phone_number should be in format '1234567890' (no + or @s.whatsapp.net, we will clean it).
-        """
         from app.config import log_debug
         
         if not self.ensure_connection():
             log_debug("WhatsApp client not connected. Attempting to send anyway, might fail or queue.")
 
         phone_number = phone_number.strip().replace("+", "").replace(" ", "").replace("-", "")
-        
-        # Add default country code if missing (assuming IN +91 for 10-digit numbers)
         if len(phone_number) == 10:
             phone_number = "91" + phone_number
             
-        # Build JID
         try:
             jid = build_jid(phone_number, "s.whatsapp.net")
-            log_debug(f"DEBUG: Generated JID object: {jid} (Type: {type(jid)})")
         except Exception as e:
             log_debug(f"ERROR: Failed to build JID: {e}")
             return False
 
         try:
-            log_debug(f"DEBUG: Attempting to send image to {jid} from {image_path}")
-            
-            # Check if file exists
             if not os.path.exists(image_path):
                 log_debug(f"ERROR: Image file not found at {image_path}")
                 return False
 
-            log_debug(f"Sending image to {jid} from {image_path}")
             self.client.send_image(
                 to=jid,
                 file=image_path,
                 caption=caption
             )
+            self.last_active = datetime.now()
             return True
         except Exception as e:
             log_debug(f"Failed to send image: {e}")
             return False
 
     def send_message(self, phone_number: str, message: str):
-        """
-        Sends a text message to the specified phone number.
-        """
         from app.config import log_debug
         
         if not self.ensure_connection():
@@ -135,25 +172,18 @@ class WhatsAppService:
 
         try:
             from neonize.proto.waE2E.WAWebProtobufsE2E_pb2 import Message
-            
             jid = build_jid(phone_number, "s.whatsapp.net")
-            
             msg = Message(conversation=message)
-            
             self.client.send_message(
                 to=jid,
                 message=msg
             )
+            self.last_active = datetime.now()
             logger.info(f"Sent message to {phone_number}: {message}")
             return True
         except Exception as e:
             logger.error(f"Failed to send message: {e}")
-            import traceback
-            traceback.print_exc()
             return False
-
-# Global instance
-whatsapp_service = WhatsAppService()
 
 # Global instance
 whatsapp_service = WhatsAppService()

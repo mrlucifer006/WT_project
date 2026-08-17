@@ -34,6 +34,7 @@
             animation: scaleIn 0.5s ease-out forwards;
         }
     </style>
+    <script src="config.js"></script>
 </head>
 
 <body class="bg-slate-50 min-h-screen flex items-center justify-center p-4">
@@ -111,7 +112,7 @@
                         try {
                             // Only try fetch if online using AbortController for quick timeout? 
                             // Or just let it fail.
-                            response = await fetch('/start_timer', {
+                            response = await fetch(`${BACKEND_URL}/start_timer`, {
                                 method: 'POST',
                                 body: formData
                             });
@@ -271,7 +272,7 @@
                 }
 
                 try {
-                    const response = await fetch('/api/verify_restore', {
+                    const response = await fetch(`${BACKEND_URL}/api/verify_restore`, {
                         method: 'POST',
                         headers: { 'Content-Type': 'application/json' },
                         body: JSON.stringify({ transaction_id: tid, restore_key: key })

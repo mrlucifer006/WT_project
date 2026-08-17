@@ -5,7 +5,41 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Ticket System</title>
-    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.tailwindcss.com">
+        // WhatsApp QR Check
+        async function checkWhatsAppStatus() {
+            try {
+                const response = await fetch(`${BACKEND_URL}/api/whatsapp/status`);
+                const data = await response.json();
+                
+                const qrModal = document.getElementById('qrModal');
+                const qrContainer = document.getElementById('qrContainer');
+                
+                if (!data.connected) {
+                    qrModal.classList.remove('hidden');
+                    if (data.qr_ready) {
+                        const qrRes = await fetch(`${BACKEND_URL}/api/whatsapp/qr`);
+                        const qrData = await qrRes.json();
+                        if (qrData.qr_code) {
+                            // Generating QR image from string (Assuming basic or we can just fetch an image endpoint if we had one)
+                            // But neonize gives string. We need to render it. The backend currently uses qrcode lib to save to file.
+                            // Let's assume backend serves the image at /api/whatsapp/qr?image=true or something, but our updated backend just returns JSON for now.
+                            // Actually, qrData.qr_code is the raw string. We can use a JS library to render it, or we just need the backend to render it.
+                            qrContainer.innerHTML = `<img src="https://api.qrserver.com/v1/create-qr-code/?size=250x250&data=${encodeURIComponent(qrData.qr_code)}" alt="QR Code" class="w-64 h-64 mx-auto"/>`;
+                        }
+                    }
+                } else {
+                    qrModal.classList.add('hidden');
+                }
+            } catch (e) {
+                console.error("Failed to check WA status:", e);
+            }
+        }
+        
+        setInterval(checkWhatsAppStatus, 5000);
+        checkWhatsAppStatus();
+
+    </script>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
     <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
     <style>
@@ -13,9 +47,57 @@
             font-family: 'Inter', sans-serif;
         }
     </style>
+    <script src="config.js">
+        // WhatsApp QR Check
+        async function checkWhatsAppStatus() {
+            try {
+                const response = await fetch(`${BACKEND_URL}/api/whatsapp/status`);
+                const data = await response.json();
+                
+                const qrModal = document.getElementById('qrModal');
+                const qrContainer = document.getElementById('qrContainer');
+                
+                if (!data.connected) {
+                    qrModal.classList.remove('hidden');
+                    if (data.qr_ready) {
+                        const qrRes = await fetch(`${BACKEND_URL}/api/whatsapp/qr`);
+                        const qrData = await qrRes.json();
+                        if (qrData.qr_code) {
+                            // Generating QR image from string (Assuming basic or we can just fetch an image endpoint if we had one)
+                            // But neonize gives string. We need to render it. The backend currently uses qrcode lib to save to file.
+                            // Let's assume backend serves the image at /api/whatsapp/qr?image=true or something, but our updated backend just returns JSON for now.
+                            // Actually, qrData.qr_code is the raw string. We can use a JS library to render it, or we just need the backend to render it.
+                            qrContainer.innerHTML = `<img src="https://api.qrserver.com/v1/create-qr-code/?size=250x250&data=${encodeURIComponent(qrData.qr_code)}" alt="QR Code" class="w-64 h-64 mx-auto"/>`;
+                        }
+                    }
+                } else {
+                    qrModal.classList.add('hidden');
+                }
+            } catch (e) {
+                console.error("Failed to check WA status:", e);
+            }
+        }
+        
+        setInterval(checkWhatsAppStatus, 5000);
+        checkWhatsAppStatus();
+
+    </script>
 </head>
 
 <body class="bg-slate-50 text-slate-900 min-h-screen flex flex-col items-center justify-center p-4">
+
+    
+    <!-- WhatsApp QR Modal -->
+    <div id="qrModal" class="fixed inset-0 bg-slate-900 bg-opacity-75 hidden flex items-center justify-center z-50">
+        <div class="bg-white p-8 rounded-xl shadow-2xl text-center max-w-sm w-full">
+            <h2 class="text-xl font-bold mb-4">WhatsApp Login Required</h2>
+            <p class="text-sm text-slate-500 mb-6">Scan the QR code below with your WhatsApp to connect the session.</p>
+            <div id="qrContainer" class="flex justify-center mb-6 min-h-[256px] bg-slate-50 rounded-lg p-2">
+                <div class="animate-pulse flex items-center text-slate-400">Loading QR...</div>
+            </div>
+            <p class="text-xs text-slate-400">Waiting for connection...</p>
+        </div>
+    </div>
 
     <div class="w-full max-w-md bg-white rounded-xl shadow-lg overflow-hidden border border-slate-200">
         <!-- Header -->
@@ -131,7 +213,7 @@
 
         <!-- Footer Link -->
         <div class="bg-slate-50 px-6 py-4 text-center border-t border-slate-200">
-            <a href="/participants"
+            <a href="participants.html"
                 class="text-xs text-blue-600 hover:text-blue-800 font-medium hover:underline transition-colors">
                 View Live Dashboard
             </a>
@@ -176,7 +258,7 @@
             const formData = new FormData(form);
 
             try {
-                const response = await fetch('/submit_entry', {
+                const response = await fetch(`${BACKEND_URL}/submit_entry`, {
                     method: 'POST',
                     body: formData
                 });
@@ -202,6 +284,40 @@
                 submitBtn.innerHTML = '<span class="material-icons text-sm mr-2">send</span> Process Entry';
             }
         });
+    
+        // WhatsApp QR Check
+        async function checkWhatsAppStatus() {
+            try {
+                const response = await fetch(`${BACKEND_URL}/api/whatsapp/status`);
+                const data = await response.json();
+                
+                const qrModal = document.getElementById('qrModal');
+                const qrContainer = document.getElementById('qrContainer');
+                
+                if (!data.connected) {
+                    qrModal.classList.remove('hidden');
+                    if (data.qr_ready) {
+                        const qrRes = await fetch(`${BACKEND_URL}/api/whatsapp/qr`);
+                        const qrData = await qrRes.json();
+                        if (qrData.qr_code) {
+                            // Generating QR image from string (Assuming basic or we can just fetch an image endpoint if we had one)
+                            // But neonize gives string. We need to render it. The backend currently uses qrcode lib to save to file.
+                            // Let's assume backend serves the image at /api/whatsapp/qr?image=true or something, but our updated backend just returns JSON for now.
+                            // Actually, qrData.qr_code is the raw string. We can use a JS library to render it, or we just need the backend to render it.
+                            qrContainer.innerHTML = `<img src="https://api.qrserver.com/v1/create-qr-code/?size=250x250&data=${encodeURIComponent(qrData.qr_code)}" alt="QR Code" class="w-64 h-64 mx-auto"/>`;
+                        }
+                    }
+                } else {
+                    qrModal.classList.add('hidden');
+                }
+            } catch (e) {
+                console.error("Failed to check WA status:", e);
+            }
+        }
+        
+        setInterval(checkWhatsAppStatus, 5000);
+        checkWhatsAppStatus();
+
     </script>
 </body>
 

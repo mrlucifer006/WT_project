@@ -9,7 +9,9 @@ import json
 import asyncio
 from datetime import datetime, timedelta
 
-from app.services.google_sheets import GoogleSheetService
+from app.services.csv_service import csv_service
+from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import FileResponse
 from app.services.qr_generator import QRGenerator
 from app.services.whatsapp import whatsapp_service
 from app.services.crypto import crypto_service
@@ -17,15 +19,23 @@ from app.config import settings
 
 app = FastAPI()
 
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
+
 # Mount static files
 app.mount("/static", StaticFiles(directory="static"), name="static")
 app.mount("/generated_qrs", StaticFiles(directory="generated_qrs"), name="generated_qrs")
 
-templates = Jinja2Templates(directory="templates")
+
 
 # Initialize services
 qr_generator = QRGenerator()
-google_sheet_service = GoogleSheetService()
+
 
 def get_local_ip():
     try:
@@ -113,7 +123,7 @@ async def startup_event():
     # Initialize Google Sheets Service
     print("Initializing Google Sheets Service...")
     try:
-        google_sheet_service.connect()
+        csv_service.connect()
         print("Google Sheets Service initialized successfully.")
     except Exception as e:
         print(f"Error initializing Google Sheets Service: {e}")
@@ -146,9 +156,32 @@ async def startup_event():
             print(f"Restoring timer for {session['name']} ({remaining_minutes:.2f} mins left)")
             asyncio.create_task(session_timer_task(session["phone"], session["duration"], tid, is_resume=True, resume_seconds=remaining_seconds))
 
+
+@app.get("/api/whatsapp/status")
+async def get_wa_status():
+    return {"connected": whatsapp_service.is_connected, "qr_ready": whatsapp_service.qr_code is not None}
+
+@app.get("/api/whatsapp/qr")
+async def get_wa_qr():
+    if whatsapp_service.qr_code:
+        return {"qr_code": whatsapp_service.qr_code}
+    return JSONResponse(status_code=404, content={"message": "QR not ready"})
+
+@app.get("/api/csv/download")
+async def download_csv():
+    file_path = "transactions.csv"
+    if os.path.exists(file_path):
+        return FileResponse(path=file_path, filename="transactions.csv", media_type="text/csv")
+    return JSONResponse(status_code=404, content={"message": "CSV not found"})
+
+@app.post("/api/whatsapp/logout")
+async def wa_logout():
+    whatsapp_service.logout()
+    return {"status": "logged out"}
+
 @app.get("/", response_class=HTMLResponse)
 async def read_root(request: Request):
-    return templates.TemplateResponse("index.html", {"request": request})
+    return templates.TemplateResponse(request, "index.html", {"request": request})
 
 @app.post("/submit_entry")
 async def submit_entry(
@@ -170,8 +203,8 @@ async def submit_entry(
                  content={"status": "Error", "message": "Transaction ID is required for Online payments"}
              )
          # Check for duplicate transaction ID
-         if settings.SHEET_URL:
-             if google_sheet_service.check_transaction_exists(settings.SHEET_URL, transaction_id):
+         if "":
+             if csv_service.check_transaction_exists(transaction_id):
                  return JSONResponse(
                      status_code=400, 
                      content={"status": "Error", "message": "Transaction ID already exists"}
@@ -203,7 +236,7 @@ async def verify_entry(request: Request, token: str):
             plan = data.get("plan", "Unknown") # New Field
             secure_key = data.get("secure_key")
         except Exception:
-            return templates.TemplateResponse("scan_result.html", {
+            return templates.TemplateResponse(request, "scan_result.html", {
                 "request": request,
                 "status": "error",
                 "message": "Invalid or Tampered QR Code"
@@ -214,7 +247,7 @@ async def verify_entry(request: Request, token: str):
         # We check this FIRST because if a session is active, the key is already removed from pending_keys,
         # so the pending_keys check below would assume it's invalid/expired.
         if transaction_id in active_sessions:
-             return templates.TemplateResponse("scan_result.html", {
+             return templates.TemplateResponse(request, "scan_result.html", {
                 "request": request,
                 "status": "check_restore",
                 "transaction_id": transaction_id,
@@ -227,22 +260,22 @@ async def verify_entry(request: Request, token: str):
         # 2. Validate Security Key (Pending Session)
         if transaction_id not in pending_keys:
              # Check if already processed (not in pending lists)
-             current_status = google_sheet_service.get_entry_status(transaction_id)
+             current_status = csv_service.get_entry_status(transaction_id)
              if current_status and current_status.strip().lower() == "in":
-                 return templates.TemplateResponse("scan_result.html", {
+                 return templates.TemplateResponse(request, "scan_result.html", {
                     "request": request,
                     "status": "error",
                     "message": "Entry ALREADY processed/used."
                  })
              else:
-                 return templates.TemplateResponse("scan_result.html", {
+                 return templates.TemplateResponse(request, "scan_result.html", {
                     "request": request,
                     "status": "error",
                     "message": "Invalid QR Code: Transaction not found or expired."
                  })
         
         if pending_keys[transaction_id] != secure_key:
-             return templates.TemplateResponse("scan_result.html", {
+             return templates.TemplateResponse(request, "scan_result.html", {
                 "request": request,
                 "status": "error",
                 "message": "Security Check Failed: Invalid Key."
@@ -253,7 +286,7 @@ async def verify_entry(request: Request, token: str):
         # If transaction is NOT in pending_keys, it is handled by the first check.
         
         # Update Google Sheets
-        google_sheet_service.update_entry_status(transaction_id, "In")
+        csv_service.update_entry_status(transaction_id, "In")
         
         # Note: We do NOT remove the key here anymore. 
         # It will be removed in /start_timer to allow re-scanning if browser is closed.
@@ -262,7 +295,7 @@ async def verify_entry(request: Request, token: str):
         msg = f"Welcome {name}! Your entry is confirmed. Please ask the admin to start your {duration} mins session."
         whatsapp_service.send_message(phone, msg)
         
-        return templates.TemplateResponse("scan_result.html", {
+        return templates.TemplateResponse(request, "scan_result.html", {
             "request": request,
             "status": "success",
             "name": name,
@@ -275,7 +308,7 @@ async def verify_entry(request: Request, token: str):
         
     except Exception as e:
         print(f"Verification Failed: {e}")
-        return templates.TemplateResponse("scan_result.html", {
+        return templates.TemplateResponse(request, "scan_result.html", {
             "request": request,
             "status": "error",
             "message": "Verification Processing Failed"
@@ -375,12 +408,12 @@ def process_entry_task(name: str, phone: str, transaction_id: str, plan_selectio
         return
 
     # 5. Save to Google Sheets
-    if settings.SHEET_URL:
+    if "":
         try:
             timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
             # Order: Timestamp, Name, Phone, Transaction ID, Amount, Duration, Status, Payment Mode, Plan
             row_data = [timestamp, name, phone, transaction_id, amount, duration, "Pending", payment_mode, plan_name]
-            google_sheet_service.append_data(settings.SHEET_URL, row_data)
+            csv_service.append_data(row_data)
         except Exception as e:
             log_debug(f"Failed to save to Google Sheets: {e}")
     else:
@@ -425,7 +458,7 @@ async def hourly_stats_task():
                 await asyncio.sleep(wait_seconds)
             
             # --- Perform Task ---
-            stats = google_sheet_service.get_stats_for_today(settings.SHEET_URL)
+            stats = csv_service.get_stats_for_today("")
             
             msg = (
                 f"Hourly Report\n"
@@ -542,13 +575,13 @@ async def verify_restore(request: Request):
 
 @app.get("/participants", response_class=HTMLResponse)
 async def view_participants(request: Request):
-    return templates.TemplateResponse("participants.html", {"request": request})
+    return templates.TemplateResponse(request, "participants.html", {"request": request})
 
 @app.get("/health", response_class=HTMLResponse)
 async def view_health(request: Request):
     auth_cookie = request.cookies.get("health_auth")
     authenticated = auth_cookie == "true"
-    return templates.TemplateResponse("health.html", {"request": request, "authenticated": authenticated})
+    return templates.TemplateResponse(request, "health.html", {"request": request, "authenticated": authenticated})
 
 @app.post("/health/login", response_class=HTMLResponse)
 async def health_login(request: Request, username: str = Form(...), password: str = Form(...)):
@@ -560,11 +593,11 @@ async def health_login(request: Request, username: str = Form(...), password: st
         # Simple hack: if we want to redirect back to /data if possible, but form doesn't carry it easily without hidden field.
         # For now, always Health. But let's support /data access.
         
-        response = templates.TemplateResponse("health.html", {"request": request, "authenticated": True})
+        response = templates.TemplateResponse(request, "health.html", {"request": request, "authenticated": True})
         response.set_cookie(key="health_auth", value="true", httponly=True)
         return response
     else:
-        return templates.TemplateResponse("health.html", {
+        return templates.TemplateResponse(request, "health.html", {
             "request": request, 
             "authenticated": False, 
             "error": "Invalid Credentials"
@@ -579,9 +612,9 @@ async def view_data(request: Request):
          return RedirectResponse(url="/health", status_code=302)
     
     # Fetch Data
-    stats = google_sheet_service.get_total_stats(settings.SHEET_URL)
+    stats = csv_service.get_total_stats("")
     
-    return templates.TemplateResponse("data.html", {
+    return templates.TemplateResponse(request, "data.html", {
         "request": request, 
         "total_participants": stats["count"],
         "total_revenue": stats["total"]

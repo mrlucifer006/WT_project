@@ -13,6 +13,7 @@
             font-family: 'Inter', sans-serif;
         }
     </style>
+    <script src="config.js"></script>
 </head>
 
 <body class="bg-slate-50 text-slate-900 min-h-screen p-6">
@@ -23,7 +24,7 @@
                 <h1 class="text-2xl font-bold text-slate-900">Live Sessions</h1>
                 <p class="text-slate-500 text-sm">Real-time participant tracking</p>
             </div>
-            <a href="/"
+            <a href="index.html"
                 class="bg-white border border-slate-300 text-slate-700 hover:bg-slate-50 px-4 py-2 rounded-lg text-sm font-medium transition-colors shadow-sm flex items-center">
                 <span class="material-icons text-sm mr-2">arrow_back</span> Back to Billing
             </a>
@@ -92,7 +93,7 @@
     <script>
         async function fetchSessions() {
             try {
-                const response = await fetch('/api/sessions');
+                const response = await fetch(`${BACKEND_URL}/api/sessions`);
                 if (!response.ok) return;
                 const sessions = await response.json();
                 renderTable(sessions);

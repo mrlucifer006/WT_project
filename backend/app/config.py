@@ -1,8 +1,8 @@
 from pydantic_settings import BaseSettings
 
 class Settings(BaseSettings):
-    SHEET_URL: str
-    ADMIN_PHONE: str
+    SHEET_URL: str = ""
+    ADMIN_PHONE: str = ""
     WHATSAPP_SESSION_NAME: str = "my_session"
     MAX_RETRIES: int = 3
     RETRY_DELAY_SECONDS: int = 5

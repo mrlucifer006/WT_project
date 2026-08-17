@@ -13,6 +13,7 @@
             font-family: 'Inter', sans-serif;
         }
     </style>
+    <script src="config.js"></script>
 </head>
 
 <body class="bg-slate-100 min-h-screen flex items-center justify-center p-4">
@@ -163,7 +164,7 @@
             // 1. Get Overall Stats
             const start = performance.now();
             try {
-                const response = await fetch('/api/health_stats');
+                const response = await fetch(`${BACKEND_URL}/api/health_stats`);
                 const end = performance.now();
                 const latency = Math.round(end - start);
 
