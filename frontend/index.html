@@ -171,9 +171,9 @@
                 const qrModal = document.getElementById('qrModal');
                 const qrContainer = document.getElementById('qrContainer');
                 
-                if (!data.connected) {
+                if (!data.connected || !data.logged_in) {
                     qrModal.classList.remove('hidden');
-                    if (data.qr_ready) {
+                    if (data.qr_ready || data.qr_code) {
                         qrContainer.innerHTML = `<img src="${BACKEND_URL}/api/whatsapp/qr_image?t=${Date.now()}" alt="WhatsApp QR Code" class="w-52 h-52 mx-auto rounded-lg shadow-sm border border-slate-100"/>`;
                     }
                 } else {

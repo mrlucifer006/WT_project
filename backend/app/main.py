@@ -156,24 +156,26 @@ async def startup_event():
 
 @app.get("/api/whatsapp/status")
 async def get_wa_status():
-    logged_in = whatsapp_service.is_logged_in
-    connected = whatsapp_service.is_connected
+    logged_in = bool(whatsapp_service.is_logged_in)
+    connected = bool(whatsapp_service.is_connected)
+    has_qr = whatsapp_service.qr_code is not None
     return {
-        "connected": logged_in or connected,
+        "connected": logged_in,
         "logged_in": logged_in,
         "socket_connected": connected,
-        "qr_ready": (whatsapp_service.qr_code is not None) and not logged_in
+        "qr_ready": has_qr and not logged_in,
+        "qr_code": whatsapp_service.qr_code if not logged_in else None
     }
 
 @app.get("/api/whatsapp/qr")
 async def get_wa_qr():
-    if whatsapp_service.qr_code:
+    if whatsapp_service.qr_code and not whatsapp_service.is_logged_in:
         return {"qr_code": whatsapp_service.qr_code}
     return JSONResponse(status_code=404, content={"message": "QR not ready"})
 
 @app.get("/api/whatsapp/qr_image")
 async def get_wa_qr_image():
-    if whatsapp_service.qr_code:
+    if whatsapp_service.qr_code and not whatsapp_service.is_logged_in:
         import io
         import qrcode
         from fastapi.responses import Response
@@ -182,7 +184,11 @@ async def get_wa_qr_image():
         buf = io.BytesIO()
         img.save(buf, format="PNG")
         buf.seek(0)
-        return Response(content=buf.getvalue(), media_type="image/png")
+        return Response(
+            content=buf.getvalue(),
+            media_type="image/png",
+            headers={"Cache-Control": "no-cache, no-store, must-revalidate"}
+        )
     return JSONResponse(status_code=404, content={"message": "QR not ready"})
 
 @app.get("/api/csv/download")
